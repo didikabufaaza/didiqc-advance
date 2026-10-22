@@ -2361,20 +2361,65 @@ id="hapusParamTable"></div></div>
 
 <div class="page" id="pageEqmaintenance">
 <div class="card"><div class="card-header"><h3><i class="fas fa-wrench"></i> Maintenance</h3>
-<div class="btn-group"><select id="eqMaintFilterEq" onchange="renderEqMaintenance()" style="width:auto;padding:6px 10px;font-size:.85rem"></select><button class="btn btn-primary btn-sm" onclick="openEqMaintModal()"><i class="fas fa-plus"></i> Tambah</button></div></div>
-<div class="card-body"><div class="table-wrap"><table><thead><tr><th>No</th><th>Alat</th><th>Tipe</th><th>Tanggal</th><th>Engineer</th><th>Deskripsi</th><th>Biaya</th><th>Status</th><th>Next Date</th><th>Tanda Tangan</th><th>Aksi</th></tr></thead><tbody id="eqMaintBody"></tbody></table></div></div></div>
+<div class="btn-group" style="display:flex;gap:6px;flex-wrap:wrap">
+  <button class="btn btn-secondary btn-sm" onclick="printEqMaintenance()"><i class="fas fa-print"></i> Cetak</button>
+  <button class="btn btn-secondary btn-sm" onclick="pdfEqMaintenance()"><i class="fas fa-file-pdf"></i> PDF</button>
+  <button class="btn btn-success btn-sm" onclick="exportEqMaintenanceExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+  <button class="btn btn-primary btn-sm" onclick="openEqMaintModal()"><i class="fas fa-plus"></i> Tambah</button>
+</div></div>
+<div class="card-body">
+  <div class="filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:var(--bg-secondary);padding:10px;border-radius:8px">
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Alat</label><select id="eqMaintFilterEq" onchange="renderEqMaintenance()" style="width:auto;padding:5px 8px;font-size:.82rem"></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Tipe</label><select id="eqMaintFilterType" onchange="renderEqMaintenance()" style="width:auto;padding:5px 8px;font-size:.82rem"><option value="">Semua Tipe</option><option value="preventive">Preventive</option><option value="corrective">Corrective</option><option value="emergency">Emergency</option></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Status</label><select id="eqMaintFilterStatus" onchange="renderEqMaintenance()" style="width:auto;padding:5px 8px;font-size:.82rem"><option value="">Semua Status</option><option value="done">Done</option><option value="in-progress">In Progress</option><option value="scheduled">Scheduled</option></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Dari Tanggal</label><input type="date" id="eqMaintFilterStart" onchange="renderEqMaintenance()" style="padding:4px 8px;font-size:.82rem"></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Sampai</label><input type="date" id="eqMaintFilterEnd" onchange="renderEqMaintenance()" style="padding:4px 8px;font-size:.82rem"></div>
+    <div class="filter-group" style="align-self:flex-end"><button class="btn btn-outline btn-xs" onclick="resetEqMaintFilter()" title="Reset Filter"><i class="fas fa-undo"></i> Reset</button></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>No</th><th>Alat</th><th>Tipe</th><th>Tanggal</th><th>Engineer</th><th>Deskripsi</th><th>Biaya</th><th>Status</th><th>Next Date</th><th>Tanda Tangan</th><th>Aksi</th></tr></thead><tbody id="eqMaintBody"></tbody></table></div>
+</div></div>
 </div>
 
 <div class="page" id="pageEqcalibration">
 <div class="card"><div class="card-header"><h3><i class="fas fa-ruler"></i> Calibration</h3>
-<div class="btn-group"><select id="eqCalFilterEq" onchange="renderEqCalibration()" style="width:auto;padding:6px 10px;font-size:.85rem"></select><button class="btn btn-primary btn-sm" onclick="openEqCalModal()"><i class="fas fa-plus"></i> Tambah</button></div></div>
-<div class="card-body"><div id="eqCalAlertBanner"></div><div class="table-wrap"><table><thead><tr><th>No</th><th>Alat</th><th>Tanggal</th><th>Vendor</th><th>Hasil</th><th>Next Date</th><th>Reminder</th><th>Sertifikat</th><th>Aksi</th></tr></thead><tbody id="eqCalBody"></tbody></table></div></div></div>
+<div class="btn-group" style="display:flex;gap:6px;flex-wrap:wrap">
+  <button class="btn btn-secondary btn-sm" onclick="printEqCalibration()"><i class="fas fa-print"></i> Cetak</button>
+  <button class="btn btn-secondary btn-sm" onclick="pdfEqCalibration()"><i class="fas fa-file-pdf"></i> PDF</button>
+  <button class="btn btn-success btn-sm" onclick="exportEqCalibrationExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+  <button class="btn btn-primary btn-sm" onclick="openEqCalModal()"><i class="fas fa-plus"></i> Tambah</button>
+</div></div>
+<div class="card-body">
+  <div id="eqCalAlertBanner"></div>
+  <div class="filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:var(--bg-secondary);padding:10px;border-radius:8px">
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Alat</label><select id="eqCalFilterEq" onchange="renderEqCalibration()" style="width:auto;padding:5px 8px;font-size:.82rem"></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Vendor</label><select id="eqCalFilterVendor" onchange="renderEqCalibration()" style="width:auto;padding:5px 8px;font-size:.82rem"><option value="">Semua Vendor</option></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Hasil</label><select id="eqCalFilterResult" onchange="renderEqCalibration()" style="width:auto;padding:5px 8px;font-size:.82rem"><option value="">Semua Hasil</option><option value="PASS">PASS / Sesuai</option><option value="FAIL">FAIL / Tidak Sesuai</option><option value="ADJUSTED">Adjusted</option></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Dari Tanggal</label><input type="date" id="eqCalFilterStart" onchange="renderEqCalibration()" style="padding:4px 8px;font-size:.82rem"></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Sampai</label><input type="date" id="eqCalFilterEnd" onchange="renderEqCalibration()" style="padding:4px 8px;font-size:.82rem"></div>
+    <div class="filter-group" style="align-self:flex-end"><button class="btn btn-outline btn-xs" onclick="resetEqCalFilter()" title="Reset Filter"><i class="fas fa-undo"></i> Reset</button></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>No</th><th>Alat</th><th>Tanggal</th><th>Vendor</th><th>Hasil</th><th>Next Date</th><th>Reminder</th><th>Sertifikat</th><th>Aksi</th></tr></thead><tbody id="eqCalBody"></tbody></table></div>
+</div></div>
 </div>
 
 <div class="page" id="pageEqbreakdown">
 <div class="card"><div class="card-header"><h3><i class="fas fa-exclamation-triangle"></i> Breakdown</h3>
-<div class="btn-group"><select id="eqBrkFilterEq" onchange="renderEqBreakdown()" style="width:auto;padding:6px 10px;font-size:.85rem"></select><button class="btn btn-primary btn-sm" onclick="openEqBrkModal()"><i class="fas fa-plus"></i> Report Breakdown</button></div></div>
-<div class="card-body"><div class="table-wrap"><table><thead><tr><th>No</th><th>Alat</th><th>Tgl Report</th><th>Teknisi</th><th>Masalah</th><th>Solusi</th><th>Start</th><th>End</th><th>Status</th><th>Biaya</th><th>Aksi</th></tr></thead><tbody id="eqBrkBody"></tbody></table></div></div></div>
+<div class="btn-group" style="display:flex;gap:6px;flex-wrap:wrap">
+  <button class="btn btn-secondary btn-sm" onclick="printEqBreakdown()"><i class="fas fa-print"></i> Cetak</button>
+  <button class="btn btn-secondary btn-sm" onclick="pdfEqBreakdown()"><i class="fas fa-file-pdf"></i> PDF</button>
+  <button class="btn btn-success btn-sm" onclick="exportEqBreakdownExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+  <button class="btn btn-primary btn-sm" onclick="openEqBrkModal()"><i class="fas fa-plus"></i> Report Breakdown</button>
+</div></div>
+<div class="card-body">
+  <div class="filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:var(--bg-secondary);padding:10px;border-radius:8px">
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Alat</label><select id="eqBrkFilterEq" onchange="renderEqBreakdown()" style="width:auto;padding:5px 8px;font-size:.82rem"></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Status</label><select id="eqBrkFilterStatus" onchange="renderEqBreakdown()" style="width:auto;padding:5px 8px;font-size:.82rem"><option value="">Semua Status</option><option value="open">Open</option><option value="in-progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Dari Tanggal</label><input type="date" id="eqBrkFilterStart" onchange="renderEqBreakdown()" style="padding:4px 8px;font-size:.82rem"></div>
+    <div class="filter-group"><label style="font-size:.78rem;font-weight:600">Sampai</label><input type="date" id="eqBrkFilterEnd" onchange="renderEqBreakdown()" style="padding:4px 8px;font-size:.82rem"></div>
+    <div class="filter-group" style="align-self:flex-end"><button class="btn btn-outline btn-xs" onclick="resetEqBrkFilter()" title="Reset Filter"><i class="fas fa-undo"></i> Reset</button></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>No</th><th>Alat</th><th>Tgl Report</th><th>Teknisi</th><th>Masalah</th><th>Solusi</th><th>Start</th><th>End</th><th>Status</th><th>Biaya</th><th>Aksi</th></tr></thead><tbody id="eqBrkBody"></tbody></table></div>
+</div></div>
 </div>
 
 <div class="page" id="pageEqdocuments">
@@ -2883,9 +2928,9 @@ onclick="clM('modalRestore')">&times;</button></div><div class="modal-body"><div
 <div class="form-row form-row-3"><div class="form-group"><label>Power</label><input type="text" id="mEqPower"></div><div class="form-group"><label>Voltage</label><input type="text" id="mEqVoltage"></div><div class="form-group"><label>Throughput</label><input type="text" id="mEqThroughput"></div></div>
 <div class="form-row form-row-3"><div class="form-group"><label>Parameter</label><input type="text" id="mEqParameter"></div><div class="form-group"><label>Sample Volume</label><input type="text" id="mEqSample"></div><div class="form-group"><label>Communication</label><input type="text" id="mEqComm"></div></div>
 <div class="form-row form-row-2"><div class="form-group"><label>Temperature</label><input type="text" id="mEqTemp"></div><div class="form-group"><label>Humidity</label><input type="text" id="mEqHumidity"></div></div>
-<h4 style="margin:14px 0 8px;color:var(--primary)"><i class="fas fa-shield-alt"></i> Garansi</h4>
-<div class="form-row form-row-3"><div class="form-group"><label>Garansi Start</label><input type="date" id="mEqWarrantyStart"></div><div class="form-group"><label>Garansi End</label><input type="date" id="mEqWarrantyEnd"></div><div class="form-group"><label>QR Code (auto)</label><input type="text" id="mEqQr" placeholder="Auto-generated"></div></div>
-<div class="form-group"><label>Notes</label><textarea id="mEqNotes" rows="2"></textarea></div>
+<h4 style="margin:14px 0 8px;color:var(--primary)"><i class="fas fa-shield-alt"></i> Garansi &amp; Kalibrasi</h4>
+<div class="form-row form-row-3"><div class="form-group"><label>Garansi Start</label><input type="date" id="mEqWarrantyStart"></div><div class="form-group"><label>Garansi End</label><input type="date" id="mEqWarrantyEnd"></div><div class="form-group"><label>Habis Masa Kalibrasi</label><input type="date" id="mEqCalExpiry"></div></div>
+<div class="form-row form-row-2"><div class="form-group"><label>QR Code (auto)</label><input type="text" id="mEqQr" placeholder="Auto-generated"></div><div class="form-group"><label>Notes</label><textarea id="mEqNotes" rows="2"></textarea></div></div>
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="clM('modalEq')">Batal</button><button class="btn btn-primary" onclick="saveEq()"><i class="fas fa-save"></i> Simpan</button></div>
 </div></div>
@@ -4262,6 +4307,8 @@ function getActiveRole(){if(!CU)return'';if(CU.role==='superadmin'&&!CU.isSecond
 
 // 🆕 PERBAIKAN v9.5: onViewAsChange - Reset total & muat data akun baru
 function onViewAsChange(){
+  var sel=G('viewAsSelect');
+  var targetUser=sel?sel.value:'';
   // 1. Reset semua UI & DOM ke state awal (bersihkan sisa akun lama)
   resetAllUI();
   // 2. Reset semua cache datainput
@@ -4271,24 +4318,33 @@ QCCache=[];pmeCache=[];csCache=[];scvCache=[];validasiCache=[];
   // 3. Destroy semua chart yang aktif
 Object.keys(chartInstances).forEach(function(k){destroyChart(k);});
   chartInstances={};
+  // Pertahankan pilihan View As di select & pastikan dropdown tetap terlihat
+  if(G('viewAsSelect')) G('viewAsSelect').value=targetUser;
+  if(G('viewAsWrap')) G('viewAsWrap').style.display='';
   // 4. Muat data dari akun yang dipilih (getActiveUsername() sudah return akun target)
   sl('Memuat data akun...');
+  var effUser=targetUser||getActiveUsername();
+  var effRole=targetUser?'user':getActiveRole();
   google.script.run.withSuccessHandler(function(r){hl();
    if(!r||!r.ok){toast('Gagal memuat data','error');return;}
    // Update data global dengan data akun baru
-CD.params=r.params||[];CD.lots=r.lots||[];CD.teaList=r.teaList||[];
+   CD.params=r.params||[];CD.lots=r.lots||[];CD.teaList=r.teaList||[];
    CD.settings=r.settings||{};CD.kop=r.kop||{};CD.archiveYears=r.archiveYears||[];
    CD.allUsers=r.allUsers||[];CD.appLogo=r.appLogo||'';
    if(r.userInfo){CU.imgAnalAccess=r.userInfo.imgAnalAccess;applyRole();}
    // Apply tema & populate filter dengan data baru
-applyTheme();loadUserTheme();
-   populateFilters();populateViewAs();populateTrendYear();
+   applyTheme();loadUserTheme();
+   populateFilters();
+   populateViewAs();
+   if(G('viewAsSelect')) G('viewAsSelect').value=targetUser;
+   if(G('viewAsWrap')) G('viewAsWrap').style.display='';
+   populateTrendYear();
    if(CD.master){initMasterCombos();}else{refreshMasterData();}
    // Muat halaman yang sedang aktif dengan data akun baru
-loadCurrentPage();
+   loadCurrentPage();
    toast('Data akun dimuat','success');
   }).withFailureHandler(function(e){hl();toast('Error: '+(e.message||e||'Terjadi kesalahan'),'error');
-  }).getInitData(getActiveUsername(),getActiveRole(), CU.role);
+  }).getInitData(effUser,effRole, CU.role);
 }
 
 function toggleSidebarMode(){var isMobile=window.innerWidth<=768;if(isMobile){G('sidebar').classList.toggle('show-mobile');G('sidebarOverlay').classList.toggle('show');}else{sidebarCollapsedState=!sidebarCollapsedState;applySidebarCollapsed(sidebarCollapsedState);try{localStorage.setItem('didiqc_sidebar_collapsed',sidebarCollapsedState?'1':'0');}catch(e){}}}
@@ -7289,11 +7345,30 @@ function printEqQR(id){
   w.document.close();
 }
 
-// ===== RENDER: Maintenance =====
+// ===== RENDER & FILTER: Maintenance =====
+function getEqMaintFiltered(){
+  var fEq=G('eqMaintFilterEq')?G('eqMaintFilterEq').value:'';
+  var fType=G('eqMaintFilterType')?G('eqMaintFilterType').value:'';
+  var fStatus=G('eqMaintFilterStatus')?G('eqMaintFilterStatus').value:'';
+  var fStart=G('eqMaintFilterStart')?G('eqMaintFilterStart').value:'';
+  var fEnd=G('eqMaintFilterEnd')?G('eqMaintFilterEnd').value:'';
+  return (eqMaintCache||[]).filter(function(m){
+    if(fEq && m.equipmentId!==fEq) return false;
+    if(fType && m.type!==fType) return false;
+    if(fStatus && m.status!==fStatus) return false;
+    if(fStart && m.date && m.date < fStart) return false;
+    if(fEnd && m.date && m.date > fEnd) return false;
+    return true;
+  });
+}
+function resetEqMaintFilter(){
+  ['eqMaintFilterEq','eqMaintFilterType','eqMaintFilterStatus','eqMaintFilterStart','eqMaintFilterEnd'].forEach(function(id){ if(G(id)) G(id).value=''; });
+  renderEqMaintenance();
+}
 function renderEqMaintenance(){
   if(!eqMaintCache.length){ G('eqMaintBody').innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text-secondary)">Belum ada data maintenance.</td></tr>'; return; }
-  var filterEq=G('eqMaintFilterEq')?G('eqMaintFilterEq').value:'';
-  var filtered=filterEq?eqMaintCache.filter(function(m){return m.equipmentId===filterEq;}):eqMaintCache;
+  var filtered=getEqMaintFiltered();
+  if(!filtered.length){ G('eqMaintBody').innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text-secondary)">Tidak ada data maintenance yang sesuai filter.</td></tr>'; return; }
   var html='';
   filtered.forEach(function(m,i){
     var e=eqCache.find(function(x){return x.id===m.equipmentId;});
@@ -7308,13 +7383,38 @@ function renderEqMaintenance(){
   G('eqMaintBody').innerHTML=html;
 }
 
-// ===== RENDER: Calibration =====
+// ===== RENDER & FILTER: Calibration =====
+function getEqCalFiltered(){
+  var fEq=G('eqCalFilterEq')?G('eqCalFilterEq').value:'';
+  var fVendor=G('eqCalFilterVendor')?G('eqCalFilterVendor').value:'';
+  var fResult=G('eqCalFilterResult')?G('eqCalFilterResult').value:'';
+  var fStart=G('eqCalFilterStart')?G('eqCalFilterStart').value:'';
+  var fEnd=G('eqCalFilterEnd')?G('eqCalFilterEnd').value:'';
+  return (eqCalCache||[]).filter(function(c){
+    if(fEq && c.equipmentId!==fEq) return false;
+    if(fVendor && (c.vendor||'')!==fVendor) return false;
+    if(fResult && (c.result||'').toUpperCase().indexOf(fResult.toUpperCase())<0) return false;
+    if(fStart && c.date && c.date < fStart) return false;
+    if(fEnd && c.date && c.date > fEnd) return false;
+    return true;
+  });
+}
+function resetEqCalFilter(){
+  ['eqCalFilterEq','eqCalFilterVendor','eqCalFilterResult','eqCalFilterStart','eqCalFilterEnd'].forEach(function(id){ if(G(id)) G(id).value=''; });
+  renderEqCalibration();
+}
 function renderEqCalibration(){
   if(!eqCalCache.length){ G('eqCalBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text-secondary)">Belum ada data kalibrasi.</td></tr>'; var _ab0=G('eqCalAlertBanner'); if(_ab0)_ab0.innerHTML=''; return; }
-  var filterEq=G('eqCalFilterEq')?G('eqCalFilterEq').value:'';
-  var filtered=filterEq?eqCalCache.filter(function(c){return c.equipmentId===filterEq;}):eqCalCache;
-  /* v9.32 — banner notifikasi merah berkedip utk alat yang masa kalibrasi-nya
-   * berakhir (dari rentang tanggal date→nextDate, atau kolom reminder hari) */
+  // populate vendor filter dropdown if empty
+  var vSel=G('eqCalFilterVendor');
+  if(vSel && vSel.options.length<=1){
+    var vList=[];
+    eqCalCache.forEach(function(c){ if(c.vendor && vList.indexOf(c.vendor)<0) vList.push(c.vendor); });
+    vList.sort();
+    vList.forEach(function(v){ vSel.innerHTML+='<option value="'+escH(v)+'">'+escH(v)+'</option>'; });
+  }
+  var filtered=getEqCalFiltered();
+  /* banner notifikasi merah berkedip utk alat yang masa kalibrasi-nya berakhir */
   var _expCal=eqCalCache.filter(eqCalExpired);
   var _ab=G('eqCalAlertBanner');
   if(_ab){
@@ -7323,6 +7423,7 @@ function renderEqCalibration(){
       _ab.innerHTML='<div class="eq-expired-banner"><i class="fas fa-exclamation-triangle"></i><span><strong>'+_expCal.length+' data kalibrasi</strong> telah berakhir: '+_nmC+'. Segera lakukan kalibrasi ulang / perbarui Next Date.</span></div>';
     }else _ab.innerHTML='';
   }
+  if(!filtered.length){ G('eqCalBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text-secondary)">Tidak ada data kalibrasi yang sesuai filter.</td></tr>'; return; }
   var html='';
   filtered.forEach(function(c,i){
     var e=eqCache.find(function(x){return x.id===c.equipmentId;});
@@ -7335,11 +7436,28 @@ function renderEqCalibration(){
   G('eqCalBody').innerHTML=html;
 }
 
-// ===== RENDER: Breakdown =====
+// ===== RENDER & FILTER: Breakdown =====
+function getEqBrkFiltered(){
+  var fEq=G('eqBrkFilterEq')?G('eqBrkFilterEq').value:'';
+  var fStatus=G('eqBrkFilterStatus')?G('eqBrkFilterStatus').value:'';
+  var fStart=G('eqBrkFilterStart')?G('eqBrkFilterStart').value:'';
+  var fEnd=G('eqBrkFilterEnd')?G('eqBrkFilterEnd').value:'';
+  return (eqBrkCache||[]).filter(function(b){
+    if(fEq && b.equipmentId!==fEq) return false;
+    if(fStatus && b.status!==fStatus) return false;
+    if(fStart && b.reportDate && b.reportDate < fStart) return false;
+    if(fEnd && b.reportDate && b.reportDate > fEnd) return false;
+    return true;
+  });
+}
+function resetEqBrkFilter(){
+  ['eqBrkFilterEq','eqBrkFilterStatus','eqBrkFilterStart','eqBrkFilterEnd'].forEach(function(id){ if(G(id)) G(id).value=''; });
+  renderEqBreakdown();
+}
 function renderEqBreakdown(){
   if(!eqBrkCache.length){ G('eqBrkBody').innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text-secondary)">Belum ada data breakdown.</td></tr>'; return; }
-  var filterEq=G('eqBrkFilterEq')?G('eqBrkFilterEq').value:'';
-  var filtered=filterEq?eqBrkCache.filter(function(b){return b.equipmentId===filterEq;}):eqBrkCache;
+  var filtered=getEqBrkFiltered();
+  if(!filtered.length){ G('eqBrkBody').innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text-secondary)">Tidak ada data breakdown yang sesuai filter.</td></tr>'; return; }
   var html='';
   filtered.forEach(function(b,i){
     var e=eqCache.find(function(x){return x.id===b.equipmentId;});
@@ -7347,6 +7465,248 @@ function renderEqBreakdown(){
     html+='<tr><td>'+(i+1)+'</td><td>'+escH(eName)+'</td><td>'+eqFmt(b.reportDate)+'</td><td>'+escH(b.technician)+'</td><td>'+escH(b.problem)+'</td><td>'+escH(b.solution)+'</td><td>'+eqFmt(b.startDate)+'</td><td>'+eqFmt(b.endDate)+'</td><td>'+eqStatusBadge(b.status)+'</td><td>'+eqMoney(b.cost)+'</td><td class="table-actions"><button class="btn btn-warning btn-xs" onclick="editEqBrk(\''+b.id+'\')"><i class="fas fa-edit"></i></button> <button class="btn btn-danger btn-xs" onclick="delEqBrk(\''+b.id+'\')"><i class="fas fa-trash"></i></button></td></tr>';
   });
   G('eqBrkBody').innerHTML=html;
+}
+
+// ===== HELPER: CETAK & PDF FORMAL KOP SURAT LABORATORIUM =====
+function printFormalReportWindow(cfg){
+  var kop = CD.kop || {};
+  var kopHtml = buildKopHTML(kop, false);
+  var printDate = new Date().toLocaleString('id-ID', { dateStyle:'long', timeStyle:'short' });
+  var userStr = (CU ? (CU.fullName || CU.username) : '') + (CU && CU.role ? ' ('+CU.role+')' : '');
+  var w = window.open('','_blank');
+  if(!w){ toast('Izinkan popup untuk mencetak laporan','warning'); return; }
+  var doc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+escH(cfg.title)+'</title>'
+    + '<style>'
+    + '@page { size: A4 landscape; margin: 12mm 15mm; }'
+    + 'body { font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; padding: 15px; }'
+    + '.img-result-header { border-bottom: 3px double #1e293b; padding-bottom: 8px; margin-bottom: 12px; text-align: center; }'
+    + '.report-title { text-align: center; margin: 10px 0 4px; font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }'
+    + '.report-subtitle { text-align: center; margin: 0 0 14px; font-size: 10pt; color: #475569; }'
+    + '.meta-box { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 9pt; background: #f8fafc; padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 4px; }'
+    + 'table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 9pt; }'
+    + 'th, td { border: 1px solid #334155; padding: 5px 7px; vertical-align: top; }'
+    + 'th { background: #f1f5f9; font-weight: 700; text-align: center; text-transform: uppercase; font-size: 8.5pt; }'
+    + 'tr:nth-child(even) td { background: #fafafa; }'
+    + '.ttd-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 35px; page-break-inside: avoid; }'
+    + '.ttd-box { width: 40%; text-align: center; }'
+    + '.ttd-space { height: 60px; }'
+    + '.ttd-name { font-weight: 700; text-decoration: underline; margin-top: 4px; }'
+    + '.badge { display: inline-block; padding: 2px 6px; font-size: 8pt; border-radius: 3px; font-weight: 600; }'
+    + '@media print { .no-print { display: none; } body { padding: 0; } }'
+    + '</style></head><body>'
+    + kopHtml
+    + '<div class="report-title">'+escH(cfg.title)+'</div>'
+    + '<div class="report-subtitle">'+(cfg.subtitle ? escH(cfg.subtitle) : '')+'</div>'
+    + '<div class="meta-box"><div><strong>Filter / Kriteria:</strong> '+escH(cfg.filterInfo||'Semua Data')+'</div>'
+    + '<div><strong>Dicetak:</strong> '+printDate+' | <strong>Oleh:</strong> '+escH(userStr)+'</div></div>'
+    + '<table><thead><tr>'+cfg.theadHtml+'</tr></thead><tbody>'+cfg.tbodyHtml+'</tbody></table>'
+    + '<div class="ttd-section">'
+    + '<div class="ttd-box"><p style="margin:0 0 4px">Mengetahui,<br><strong>Kepala Laboratorium</strong></p><div class="ttd-space"></div><p class="ttd-name">'+escH(kop.kepalaRuangan||'______________________')+'</p><p style="margin:2px 0;font-size:8.5pt">NIP/SIP: .......................................</p></div>'
+    + '<div class="ttd-box"><p style="margin:0 0 4px">Penanggung Jawab Teknis / Operator,<br><strong>Petugas Alat & Mutu</strong></p><div class="ttd-space"></div><p class="ttd-name">'+escH(userStr)+'</p><p style="margin:2px 0;font-size:8.5pt">DiDiQC Laboratory System</p></div>'
+    + '</div>'
+    + '<div style="margin-top:20px;text-align:center;font-size:7.5pt;color:#94a3b8;border-top:1px dashed #cbd5e1;padding-top:6px">Dokumen Resmi Laboratorium — DiDiQC Management &amp; QC System — Dicetak otomatis</div>'
+    + '</body></html>';
+  w.document.open();
+  w.document.write(doc);
+  w.document.close();
+  setTimeout(function(){ w.focus(); w.print(); }, 400);
+}
+
+// ===== CETAK, PDF, EXCEL: MAINTENANCE =====
+function printEqMaintenance(){
+  var rows = getEqMaintFiltered();
+  if(!rows.length){ toast('Tidak ada data maintenance untuk dicetak','warning'); return; }
+  var thead = '<th>No</th><th>ID / Nama Alat</th><th>Tipe</th><th>Tanggal</th><th>Teknisi / Engineer</th><th>Deskripsi Perawatan</th><th>Biaya (Rp)</th><th>Status</th><th>Jadwal Berikutnya</th>';
+  var tbody = '';
+  rows.forEach(function(m,i){
+    var e = eqCache.find(function(x){return x.id===m.equipmentId;});
+    var eName = e ? (e.equipmentId+' — '+e.nama) : m.equipmentId;
+    tbody += '<tr><td style="text-align:center">'+(i+1)+'</td>'
+      + '<td><strong>'+escH(eName)+'</strong></td>'
+      + '<td style="text-align:center">'+escH(m.type||'-')+'</td>'
+      + '<td style="text-align:center">'+eqFmt(m.date)+'</td>'
+      + '<td>'+escH(m.engineer||'-')+'</td>'
+      + '<td>'+escH(m.description||'-')+'</td>'
+      + '<td style="text-align:right">'+eqMoney(m.cost)+'</td>'
+      + '<td style="text-align:center">'+escH(m.status||'-')+'</td>'
+      + '<td style="text-align:center">'+eqFmt(m.nextDate)+'</td></tr>';
+  });
+  var fEq = G('eqMaintFilterEq') ? G('eqMaintFilterEq').options[G('eqMaintFilterEq').selectedIndex].text : 'Semua';
+  var fType = G('eqMaintFilterType') ? G('eqMaintFilterType').value : 'Semua';
+  var fStatus = G('eqMaintFilterStatus') ? G('eqMaintFilterStatus').value : 'Semua';
+  var filterInfo = 'Alat: ' + fEq + ' | Tipe: ' + (fType||'Semua') + ' | Status: ' + (fStatus||'Semua');
+  printFormalReportWindow({
+    title: 'LAPORAN PEMELIHARAAN ALAT LABORATORIUM (EQUIPMENT MAINTENANCE)',
+    subtitle: 'Dokumen Catatan Pemeliharaan Preventif & Korektif Alat Laboratorium',
+    filterInfo: filterInfo,
+    theadHtml: thead,
+    tbodyHtml: tbody
+  });
+}
+
+function pdfEqMaintenance(){
+  toast('Membuka pratinjau cetak... Pilih "Save as PDF" pada tujuan printer.','info',4000);
+  printEqMaintenance();
+}
+
+function exportEqMaintenanceExcel(){
+  if(typeof XLSX==='undefined'){ toast('Library Excel belum termuat, silakan refresh','error'); return; }
+  var rows = getEqMaintFiltered();
+  if(!rows.length){ toast('Tidak ada data maintenance untuk diexport','warning'); return; }
+  var data = rows.map(function(m,i){
+    var e = eqCache.find(function(x){return x.id===m.equipmentId;});
+    return {
+      'No': i+1,
+      'Equipment ID': e ? e.equipmentId : m.equipmentId,
+      'Nama Alat': e ? e.nama : '',
+      'Tipe Maintenance': m.type || '',
+      'Tanggal': m.date || '',
+      'Teknisi / Engineer': m.engineer || '',
+      'Deskripsi': m.description || '',
+      'Biaya': m.cost || 0,
+      'Status': m.status || '',
+      'Next Date': m.nextDate || '',
+      'Ada TTD Digital': m.signatureURL ? 'Ya' : 'Tidak'
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:5},{wch:14},{wch:24},{wch:16},{wch:12},{wch:18},{wch:30},{wch:14},{wch:12},{wch:14},{wch:14}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Maintenance');
+  var fName = 'Laporan_Maintenance_Alat_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, fName);
+  toast('File Excel berhasil diunduh','success');
+}
+
+// ===== CETAK, PDF, EXCEL: KALIBRASI =====
+function printEqCalibration(){
+  var rows = getEqCalFiltered();
+  if(!rows.length){ toast('Tidak ada data kalibrasi untuk dicetak','warning'); return; }
+  var thead = '<th>No</th><th>ID / Nama Alat</th><th>Tanggal Kalibrasi</th><th>Vendor / Lembaga Kalibrasi</th><th>Hasil Evaluasi</th><th>Habis / Jadwal Berikut</th><th>Reminder</th><th>Catatan</th>';
+  var tbody = '';
+  rows.forEach(function(c,i){
+    var e = eqCache.find(function(x){return x.id===c.equipmentId;});
+    var eName = e ? (e.equipmentId+' — '+e.nama) : c.equipmentId;
+    var calExp = eqCalExpired(c);
+    tbody += '<tr><td style="text-align:center">'+(i+1)+'</td>'
+      + '<td><strong>'+escH(eName)+'</strong></td>'
+      + '<td style="text-align:center">'+eqFmt(c.date)+'</td>'
+      + '<td>'+escH(c.vendor||'-')+'</td>'
+      + '<td style="text-align:center;font-weight:600">'+escH(c.result||'-')+'</td>'
+      + '<td style="text-align:center">'+eqFmt(c.nextDate)+(calExp?' (EXPIRED)':'')+'</td>'
+      + '<td style="text-align:center">'+(c.reminder ? escH(c.reminder)+' hari' : '-')+'</td>'
+      + '<td>'+escH(c.notes||'-')+'</td></tr>';
+  });
+  var fEq = G('eqCalFilterEq') ? G('eqCalFilterEq').options[G('eqCalFilterEq').selectedIndex].text : 'Semua';
+  var fVen = G('eqCalFilterVendor') ? G('eqCalFilterVendor').value : 'Semua';
+  var fRes = G('eqCalFilterResult') ? G('eqCalFilterResult').value : 'Semua';
+  var filterInfo = 'Alat: ' + fEq + ' | Vendor: ' + (fVen||'Semua') + ' | Hasil: ' + (fRes||'Semua');
+  printFormalReportWindow({
+    title: 'LAPORAN KALIBRASI ALAT LABORATORIUM (EQUIPMENT CALIBRATION)',
+    subtitle: 'Dokumen Catatan Ketertelusuran & Hasil Kalibrasi Alat Laboratorium',
+    filterInfo: filterInfo,
+    theadHtml: thead,
+    tbodyHtml: tbody
+  });
+}
+
+function pdfEqCalibration(){
+  toast('Membuka pratinjau cetak... Pilih "Save as PDF" pada tujuan printer.','info',4000);
+  printEqCalibration();
+}
+
+function exportEqCalibrationExcel(){
+  if(typeof XLSX==='undefined'){ toast('Library Excel belum termuat, silakan refresh','error'); return; }
+  var rows = getEqCalFiltered();
+  if(!rows.length){ toast('Tidak ada data kalibrasi untuk diexport','warning'); return; }
+  var data = rows.map(function(c,i){
+    var e = eqCache.find(function(x){return x.id===c.equipmentId;});
+    return {
+      'No': i+1,
+      'Equipment ID': e ? e.equipmentId : c.equipmentId,
+      'Nama Alat': e ? e.nama : '',
+      'Tanggal Kalibrasi': c.date || '',
+      'Vendor / Lembaga': c.vendor || '',
+      'Hasil Evaluasi': c.result || '',
+      'Habis Masa / Next Date': c.nextDate || '',
+      'Reminder (Hari)': c.reminder || '',
+      'URL Sertifikat': c.certificateURL || '',
+      'Catatan': c.notes || ''
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:5},{wch:14},{wch:24},{wch:16},{wch:22},{wch:16},{wch:20},{wch:14},{wch:24},{wch:25}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Kalibrasi');
+  var fName = 'Laporan_Kalibrasi_Alat_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, fName);
+  toast('File Excel berhasil diunduh','success');
+}
+
+// ===== CETAK, PDF, EXCEL: BREAKDOWN =====
+function printEqBreakdown(){
+  var rows = getEqBrkFiltered();
+  if(!rows.length){ toast('Tidak ada data breakdown untuk dicetak','warning'); return; }
+  var thead = '<th>No</th><th>ID / Nama Alat</th><th>Tgl Lapor</th><th>Teknisi</th><th>Uraian Masalah / Gangguan</th><th>Solusi / Tindakan Perbaikan</th><th>Mulai Perbaikan</th><th>Selesai</th><th>Status</th><th>Biaya (Rp)</th>';
+  var tbody = '';
+  rows.forEach(function(b,i){
+    var e = eqCache.find(function(x){return x.id===b.equipmentId;});
+    var eName = e ? (e.equipmentId+' — '+e.nama) : b.equipmentId;
+    tbody += '<tr><td style="text-align:center">'+(i+1)+'</td>'
+      + '<td><strong>'+escH(eName)+'</strong></td>'
+      + '<td style="text-align:center">'+eqFmt(b.reportDate)+'</td>'
+      + '<td>'+escH(b.technician||'-')+'</td>'
+      + '<td>'+escH(b.problem||'-')+'</td>'
+      + '<td>'+escH(b.solution||'-')+'</td>'
+      + '<td style="text-align:center">'+eqFmt(b.startDate)+'</td>'
+      + '<td style="text-align:center">'+eqFmt(b.endDate)+'</td>'
+      + '<td style="text-align:center">'+escH(b.status||'-')+'</td>'
+      + '<td style="text-align:right">'+eqMoney(b.cost)+'</td></tr>';
+  });
+  var fEq = G('eqBrkFilterEq') ? G('eqBrkFilterEq').options[G('eqBrkFilterEq').selectedIndex].text : 'Semua';
+  var fStat = G('eqBrkFilterStatus') ? G('eqBrkFilterStatus').value : 'Semua';
+  var filterInfo = 'Alat: ' + fEq + ' | Status: ' + (fStat||'Semua');
+  printFormalReportWindow({
+    title: 'LAPORAN KERUSAKAN & PERBAIKAN ALAT (EQUIPMENT BREAKDOWN REPORT)',
+    subtitle: 'Dokumen Catatan Gangguan, Kerusakan, dan Riwayat Tindakan Perbaikan Alat',
+    filterInfo: filterInfo,
+    theadHtml: thead,
+    tbodyHtml: tbody
+  });
+}
+
+function pdfEqBreakdown(){
+  toast('Membuka pratinjau cetak... Pilih "Save as PDF" pada tujuan printer.','info',4000);
+  printEqBreakdown();
+}
+
+function exportEqBreakdownExcel(){
+  if(typeof XLSX==='undefined'){ toast('Library Excel belum termuat, silakan refresh','error'); return; }
+  var rows = getEqBrkFiltered();
+  if(!rows.length){ toast('Tidak ada data breakdown untuk diexport','warning'); return; }
+  var data = rows.map(function(b,i){
+    var e = eqCache.find(function(x){return x.id===b.equipmentId;});
+    return {
+      'No': i+1,
+      'Equipment ID': e ? e.equipmentId : b.equipmentId,
+      'Nama Alat': e ? e.nama : '',
+      'Tanggal Lapor': b.reportDate || '',
+      'Teknisi': b.technician || '',
+      'Masalah / Kerusakan': b.problem || '',
+      'Tindakan Solusi': b.solution || '',
+      'Mulai Perbaikan': b.startDate || '',
+      'Selesai Perbaikan': b.endDate || '',
+      'Status': b.status || '',
+      'Biaya': b.cost || 0
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:5},{wch:14},{wch:24},{wch:14},{wch:16},{wch:30},{wch:30},{wch:14},{wch:14},{wch:12},{wch:14}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Breakdown');
+  var fName = 'Laporan_Breakdown_Alat_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, fName);
+  toast('File Excel berhasil diunduh','success');
 }
 
 // ===== RENDER: Documents =====
@@ -7629,7 +7989,7 @@ function openEqModal(data){
   // ensure equipment select is populated
   eqPopulateEqSelects();
   // reset
-  ['mEqID','mEqEquipmentId','mEqNama','mEqAsset','mEqBrand','mEqModel','mEqSerial','mEqTahun','mEqLokasi','mEqPic','mEqFoto','mEqPower','mEqVoltage','mEqThroughput','mEqParameter','mEqSample','mEqComm','mEqTemp','mEqHumidity','mEqWarrantyStart','mEqWarrantyEnd','mEqQr','mEqNotes','mEqKsoStart','mEqKsoEnd'].forEach(function(id){ if(G(id)) G(id).value=''; });
+  ['mEqID','mEqEquipmentId','mEqNama','mEqAsset','mEqBrand','mEqModel','mEqSerial','mEqTahun','mEqLokasi','mEqPic','mEqFoto','mEqPower','mEqVoltage','mEqThroughput','mEqParameter','mEqSample','mEqComm','mEqTemp','mEqHumidity','mEqWarrantyStart','mEqWarrantyEnd','mEqCalExpiry','mEqQr','mEqNotes','mEqKsoStart','mEqKsoEnd'].forEach(function(id){ if(G(id)) G(id).value=''; });
   G('mEqStatus').value='active';
   /* v9.32 — reset Status Kepemilikan & Vendor combo */
   var _ownEl=G('mEqOwnStatus'); if(_ownEl) _ownEl.value='';
@@ -7675,6 +8035,7 @@ function openEqModal(data){
     G('mEqHumidity').value=data.humidity||'';
     G('mEqWarrantyStart').value=data.warrantyStart||'';
     G('mEqWarrantyEnd').value=data.warrantyEnd||'';
+    G('mEqCalExpiry').value=data.calibrationExpiry||'';
     G('mEqQr').value=data.qrCode||'';
     G('mEqNotes').value=data.notes||'';
     G('modalEqTitle').textContent='Edit Equipment';
@@ -7718,6 +8079,7 @@ function saveEq(){
     humidity:G('mEqHumidity').value,
     warrantyStart:G('mEqWarrantyStart').value,
     warrantyEnd:G('mEqWarrantyEnd').value,
+    calibrationExpiry:(G('mEqCalExpiry')?G('mEqCalExpiry').value:''),
     /* v9.32 — kepemilikan & vendor */
     ownershipStatus:(G('mEqOwnStatus')?G('mEqOwnStatus').value:''),
     vendor:getComboVal('mEqVendor'),

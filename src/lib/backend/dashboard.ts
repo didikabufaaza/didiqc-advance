@@ -64,13 +64,69 @@ export async function getDashboardData(
   try {
     const now = new Date();
     const todayStr = dateToISO(now);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfMonthStr = dateToISO(startOfMonth);
+    const d7 = new Date(now.getTime() - 7 * 86400000);
+    const d7Str = dateToISO(d7);
+    const d30b = new Date(now.getTime() - 30 * 86400000);
+    const d30bStr = dateToISO(d30b);
 
     const whereP: any = { ownerUsername: ownerUsername };
     const whereL: any = { ownerUsername: ownerUsername };
+    const whereOwner: any = { ownerUsername: ownerUsername };
 
-    const [paramRows, lotRows] = await Promise.all([
+    // Parallel fetch: params, lots, fast counts, violations, lightweight QC data
+    const [
+      paramRows,
+      lotRows,
+      totalQC,
+      todayQC,
+      validated,
+      pending,
+      weeklyQC,
+      monthlyQC,
+      wgViolations,
+      qcLightRows,
+      monthQCRows,
+    ] = await Promise.all([
       db.parameters.findMany({ where: whereP, orderBy: { parameter: "asc" } }),
       db.lotQC.findMany({ where: whereL, orderBy: { noLot: "asc" } }),
+      db.inputQC.count({ where: whereOwner }),
+      db.inputQC.count({ where: { ...whereOwner, tanggal: todayStr } }),
+      db.inputQC.count({ where: { ...whereOwner, validated: true } }),
+      db.inputQC.count({ where: { ...whereOwner, validated: false } }),
+      db.inputQC.count({ where: { ...whereOwner, tanggal: { gte: d7Str } } }),
+      db.inputQC.count({ where: { ...whereOwner, tanggal: { gte: d30bStr } } }),
+      getWestgardViolations30Days([ownerUsername, role], session),
+      // Lightweight QC rows for sigma calculation (only necessary numerical fields)
+      db.inputQC.findMany({
+        where: whereOwner,
+        select: {
+          id: true,
+          lotID: true,
+          paramID: true,
+          tanggal: true,
+          level1: true,
+          level2: true,
+          level3: true,
+        },
+      }),
+      // QC rows specifically for current month trend
+      db.inputQC.findMany({
+        where: {
+          ...whereOwner,
+          tanggal: { gte: startOfMonthStr, lte: todayStr },
+        },
+        select: {
+          id: true,
+          lotID: true,
+          paramID: true,
+          tanggal: true,
+          level1: true,
+          level2: true,
+          level3: true,
+        },
+      }),
     ]);
 
     const params = paramRows.map((r) => ({
@@ -102,17 +158,6 @@ export async function getDashboardData(
       owner: r.ownerUsername,
     }));
 
-    const allQC = await fetchInputQCRows(ownerUsername, role, {});
-
-    const todayQC = allQC.filter(function (q) {
-      return q.tanggal === todayStr;
-    });
-    const validated = allQC.filter(function (q) {
-      return q.validated;
-    });
-    const pending = allQC.filter(function (q) {
-      return !q.validated;
-    });
     const expired = lots.filter(function (l) {
       if (!l.expiredDate) return false;
       const d = parseDateStr(l.expiredDate);
@@ -125,34 +170,19 @@ export async function getDashboardData(
       return d && d >= now && d <= d30;
     });
 
-    const wgViolations = await getWestgardViolations30Days(
-      [ownerUsername, role],
-      session
-    );
-    const sigmaByBidang = computeSigmaByBidangInternal(params, lots, allQC);
-    const cvBiasByBidang = computeCVBiasByBidangInternal(lots, allQC, params);
-    const trendDetail = computeMonthTrendInternal(lots, allQC, params);
-
-    const d7 = new Date(now.getTime() - 7 * 86400000);
-    const d30b = new Date(now.getTime() - 30 * 86400000);
-    const weeklyQC = allQC.filter(function (q) {
-      const d = parseDateStr(q.tanggal);
-      return d && d >= d7;
-    }).length;
-    const monthlyQC = allQC.filter(function (q) {
-      const d = parseDateStr(q.tanggal);
-      return d && d >= d30b;
-    }).length;
+    const sigmaByBidang = computeSigmaByBidangInternal(params, lots, qcLightRows);
+    const cvBiasByBidang = computeCVBiasByBidangInternal(lots, qcLightRows, params);
+    const trendDetail = computeMonthTrendInternal(lots, monthQCRows, params);
 
     return {
       ok: true,
       stats: {
         totalParam: params.length,
         totalLot: lots.length,
-        totalQC: allQC.length,
-        todayQC: todayQC.length,
-        validated: validated.length,
-        pending: pending.length,
+        totalQC: totalQC,
+        todayQC: todayQC,
+        validated: validated,
+        pending: pending,
         expired: expired.length,
         nearExpiry: nearExpiry.length,
       },

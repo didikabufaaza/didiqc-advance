@@ -57,9 +57,9 @@ function getOptimizedDatabaseUrl(): string {
     params.set("sslmode", "require");
   }
 
-  // Force connection_limit=1 (Vercel serverless best practice)
+  // Force connection_limit=10 (Neon pooler handles concurrent requests efficiently)
   if (!params.has("connection_limit")) {
-    params.set("connection_limit", "1");
+    params.set("connection_limit", "10");
   }
 
   // pool_timeout: berapa lama wait untuk connection tersedia

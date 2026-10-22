@@ -647,6 +647,7 @@ model Equipment {
   // Warranty / contract reference
   warrantyStart   String?
   warrantyEnd     String?
+  calibrationExpiry String?  // Habis masa kalibrasi (YYYY-MM-DD)
   // v9.32 — Kepemilikan & vendor alat
   ownershipStatus String?  // KSO | Milik Sendiri | APBD | APBN | BLUD | Hibah | DAK | Lainnya
   vendor          String?  // nama vendor (dari submenu Vendors / EquipmentVendor)

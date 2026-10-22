@@ -171,6 +171,7 @@ export async function saveEquipment(args: any[], session: SessionData | null) {
     humidity: payload.humidity || null,
     warrantyStart: payload.warrantyStart || null,
     warrantyEnd: payload.warrantyEnd || null,
+    calibrationExpiry: payload.calibrationExpiry || null,
     ownershipStatus: payload.ownershipStatus || null,
     vendor: payload.vendor || null,
     ksoStartDate: payload.ksoStartDate || null,

@@ -83,3 +83,5 @@ server.log
 
 # local production-data repair backups (JANGAN di-push)
 db-backups/
+
+.vercel
