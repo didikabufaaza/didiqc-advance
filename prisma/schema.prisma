@@ -911,3 +911,128 @@ model MasterTEa {
   @@index([referensi])
   @@map("master_tea")
 }
+
+// ============================================================
+// MODUL PEER GROUP PME/PMI (ISO 13528:2022 Compliant)
+// Standard PostgreSQL, Portabel untuk NeonDB, InsForge, Supabase
+// ============================================================
+
+model PeerGroupConfig {
+  id                  String   @id // PG_<ts>_<rand>
+  title               String
+  parameter           String
+  level               String   // L1 | L2 | L3
+  startDate           String   // YYYY-MM-DD
+  endDate             String   // YYYY-MM-DD
+  aggregationRule     String   @default("latest") // latest | average | single_date
+  singleDate          String?  // YYYY-MM-DD
+  targetType          String   @default("robust_mean") // robust_mean | reference_value | pme_target
+  assignedValue       Float?
+  assignedValueSource String?
+  sdpaType            String   @default("robust_sd") // robust_sd | fixed_sdpa | tea_derived
+  sdpaValue           Float?
+  sdpaSource          String?
+  selectedHospitals   String   @db.Text // JSON string array of usernames
+  status              String   @default("draft") // draft | published | archived
+  createdBy           String
+  createdDate         DateTime @default(now())
+  updatedDate         DateTime @updatedAt
+
+  @@index([parameter])
+  @@index([startDate, endDate])
+  @@index([status])
+  @@map("peer_group_config")
+}
+
+model PeerGroupSummaryStats {
+  id             String   @id // PGSTAT_<ts>_<rand>
+  configId       String   @unique
+  totalSelected  Int
+  totalWithData  Int
+  totalValid     Int
+  totalExcluded  Int
+  mean           Float?
+  median         Float?
+  sd             Float?
+  cv             Float?
+  min            Float?
+  max            Float?
+  range          Float?
+  q1             Float?
+  q3             Float?
+  iqr            Float?
+  mad            Float?
+  robustMean     Float?
+  robustSd       Float?
+  niqr           Float?
+  uncertainty    Float?
+  targetValue    Float?
+  targetSource   String?
+  sdpaValue      Float?
+  sdpaSource     String?
+  statStatus     String   // valid | warning_n_small | invalid
+  notes          String?  @db.Text
+  createdDate    DateTime @default(now())
+
+  @@index([configId])
+  @@map("peer_group_summary_stats")
+}
+
+model PeerGroupSnapshotItem {
+  id                String   @id // PGITEM_<ts>_<rand>
+  configId          String
+  hospitalUsername  String
+  hospitalName      String
+  parameter         String
+  level             String
+  unit              String?
+  analyzer          String?
+  method            String?
+  controlLot        String?
+  reagentLot        String?
+  originalQcValue   Float?
+  usedQcValue       Float?
+  sourceCount       Int      @default(1)
+  date              String?  // YYYY-MM-DD
+  diffTarget        Float?
+  zScore            Float?   // Formal Z-score
+  zScoreAbs         Float?
+  peerRelativeScore Float?   // Skor Relatif Peer Group
+  peerRelativeAbs   Float?
+  evalCategory      String?  // memuaskan | peringatan | tindakan_korektif | belum_dapat_dievaluasi
+  biasAbs           Float?
+  biasPct           Float?
+  cvLab             Float?   // Imprecision CV% analitik laboratorium
+  tea               Float?
+  teaSource         String?
+  sigma             Float?   // (TEa - |Bias%|) / CV%
+  sigmaCategory     String?
+  isValid           Boolean  @default(true)
+  validationStatus  String   @default("valid") // valid | review | excluded
+  exclusionReason   String?
+  recommendation    String?  @db.Text
+
+  @@index([configId])
+  @@index([hospitalUsername])
+  @@index([configId, hospitalUsername])
+  @@map("peer_group_snapshot_item")
+}
+
+model PeerGroupReportDelivery {
+  id                String   @id // PGRPT_<ts>_<rand>
+  configId          String
+  recipientUsername String
+  recipientName     String
+  sentBy            String
+  sentDate          DateTime @default(now())
+  status            String   @default("sent") // sent | read
+  readDate          DateTime?
+  version           Int      @default(1)
+  summarySnapshot   String?  @db.Text // JSON ringkasan kelompok
+  itemSnapshot      String?  @db.Text // JSON data spesifik penerima
+
+  @@index([configId])
+  @@index([recipientUsername])
+  @@index([status])
+  @@map("peer_group_report_delivery")
+}

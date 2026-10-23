@@ -21,6 +21,7 @@ import * as backup from "@/lib/backend/backup";
 import * as equipment from "@/lib/backend/equipment";
 import * as multiMaster from "@/lib/backend/multi-master";
 import * as importDb from "@/lib/backend/import-db";
+import * as peerGroup from "@/lib/backend/peer-group/peer-service";
 
 export type HandlerFn = (args: any[], session: SessionData | null) => Promise<any>;
 
@@ -309,4 +310,11 @@ export const handlers: Record<string, HandlerFn> = {
   saveEquipmentReagent: equipment.saveEquipmentReagent,
   deleteEquipmentReagent: equipment.deleteEquipmentReagent,
   getEquipmentReports: equipment.getEquipmentReports,
+
+  // ===== Peer Group PME/PMI (ISO 13528:2022) =====
+  getPeerGroupFilterOptions: peerGroup.getPeerGroupFilterOptions,
+  runPeerGroupAnalysis: peerGroup.runPeerGroupAnalysis,
+  saveAndPublishPeerGroup: peerGroup.saveAndPublishPeerGroup,
+  getMyPeerGroupReports: peerGroup.getMyPeerGroupReports,
+  getPeerGroupReportDetail: peerGroup.getPeerGroupReportDetail,
 };

@@ -1697,6 +1697,8 @@ id="sbUserRole">user</div></div>
 <button class="nav-item" data-page="instrcompare" onclick="goPage('instrcompare')"><i class="fas fa-balance-scale"></i> <span>Instrument Compare</span></button>
 <button class="nav-item" data-page="tabulasi" onclick="goPage('tabulasi')"><i class="fas fa-table"></i> <span>Tabulasi Rekap</span></button>
 <button class="nav-item" data-page="opspecs" onclick="goPage('opspecs')"><i class="fas fa-bullseye"></i> <span>Analisis OPSpecs</span></button>
+<button class="nav-item" id="navPeerGroup" data-page="peergroup" onclick="goPage('peergroup')" style="display:none"><i class="fas fa-users-cog"></i> <span>Peer Group PME/PMI</span></button>
+<button class="nav-item" id="navPeerReports" data-page="peerreports" onclick="goPage('peerreports')"><i class="fas fa-file-medical"></i> <span>Laporan Analisa Peer Group</span></button>
 </div>
 </div>
 <div class="nav-divider"></div>
@@ -2196,6 +2198,221 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
 
 </div>
 </div>
+
+<!-- ===================== PAGE: PEER GROUP PME/PMI (SUPERADMIN) ===================== -->
+<div class="page" id="pagePeergroup">
+<div class="card"><div class="card-header"><h3><i class="fas fa-users-cog"></i> Evaluasi Peer Group PME / PMI (Antar-Laboratorium)</h3>
+<div style="font-size:.82rem;color:var(--text-secondary)"><i class="fas fa-shield-alt"></i> Sesuai ISO 13528:2022 Algorithm A &amp; Sigma Metrik Medis</div></div>
+<div class="card-body">
+  <!-- Filter Konfigurasi Evaluasi -->
+  <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;border:1px solid var(--border);margin-bottom:16px">
+    <h4 style="margin:0 0 10px;color:var(--primary);font-size:.92rem"><i class="fas fa-sliders-h"></i> 1. Parameter, Periode &amp; Karakteristik Kelompok</h4>
+    <div class="form-row form-row-4" style="margin-bottom:10px">
+      <div class="form-group"><label>Parameter *</label><select id="pgParam" onchange="onPgParamChange()"></select></div>
+      <div class="form-group"><label>Level QC *</label><select id="pgLevel"><option value="L1">Level 1 (Normal)</option><option value="L2">Level 2 (Patologis Rendah/Tinggi)</option><option value="L3">Level 3 (Patologis Tinggi)</option></select></div>
+      <div class="form-group"><label>Preset Tanggal</label><select id="pgDatePreset" onchange="applyPgDatePreset()"><option value="this_month">Bulan Berjalan</option><option value="last_month">Bulan Sebelumnya</option><option value="30d">30 Hari Terakhir</option><option value="7d">7 Hari Terakhir</option><option value="today">Hari Ini</option><option value="ytd">Awal Tahun s/d Hari Ini</option><option value="custom" selected>Rentang Tanggal Khusus</option></select></div>
+      <div class="form-group"><label>Aturan Agregasi Data *</label><select id="pgAggRule" onchange="togglePgSingleDate()"><option value="latest">Hasil Terakhir dalam Periode</option><option value="average">Rata-rata Periode per Rumah Sakit</option><option value="single_date">Hasil pada Tanggal Tertentu</option></select></div>
+    </div>
+    <div class="form-row form-row-4" style="margin-bottom:10px">
+      <div class="form-group"><label>Dari Tanggal *</label><input type="date" id="pgStartDate"></div>
+      <div class="form-group"><label>Sampai Tanggal *</label><input type="date" id="pgEndDate"></div>
+      <div class="form-group" id="pgSingleDateWrap" style="display:none"><label>Tanggal Spesifik *</label><input type="date" id="pgSingleDate"></div>
+      <div class="form-group"><label>Filter Alat / Analyzer (Opsional)</label><select id="pgAnalyzer"><option value="">Semua Alat / Analyzer</option></select></div>
+    </div>
+
+    <h4 style="margin:14px 0 10px;color:var(--primary);font-size:.92rem"><i class="fas fa-bullseye"></i> 2. Penetapan Target (Assigned Value) &amp; SDPA</h4>
+    <div class="form-row form-row-4" style="margin-bottom:10px">
+      <div class="form-group"><label>Dasar Nilai Target *</label><select id="pgTargetType" onchange="togglePgTargetInputs()"><option value="robust_mean">Konsensus Robust Mean Kelompok (ISO 13528)</option><option value="reference_value">Nilai Acuan Kalibrator / Referensi Independen</option><option value="pme_target">Nilai Target Penyelenggara PME Formal</option></select></div>
+      <div class="form-group" id="pgCustomTargetWrap" style="display:none"><label>Nilai Target Acuan *</label><input type="number" step="0.0001" id="pgAssignedVal" placeholder="Misal: 100.0"></div>
+      <div class="form-group"><label>Dasar SDPA (Standar Deviasi Penilaian) *</label><select id="pgSdpaType" onchange="togglePgSdpaInputs()"><option value="robust_sd">Robust SD Kelompok (Skor Relatif Peer Group)</option><option value="fixed_sdpa">SDPA Tetap / Independen (Z-score Formal PME)</option><option value="tea_derived">Diturunkan dari TEa Referensi (TEa / 3)</option></select></div>
+      <div class="form-group" id="pgCustomSdpaWrap" style="display:none"><label>Nilai SDPA Independen *</label><input type="number" step="0.0001" id="pgSdpaVal" placeholder="Misal: 4.5"></div>
+    </div>
+
+    <h4 style="margin:14px 0 10px;color:var(--primary);font-size:.92rem"><i class="fas fa-hospital"></i> 3. Pemilihan Rumah Sakit / Laboratorium Peserta</h4>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <input type="text" id="pgHospSearch" placeholder="Cari nama rumah sakit / fasyankes..." oninput="filterPgHospitalChecklist()" style="flex:1;min-width:200px;padding:5px 8px;font-size:.82rem">
+        <button type="button" class="btn btn-outline btn-xs" onclick="setAllPgHospitals(true)"><i class="fas fa-check-square"></i> Pilih Semua</button>
+        <button type="button" class="btn btn-outline btn-xs" onclick="setAllPgHospitals(false)"><i class="fas fa-square"></i> Hapus Pilihan</button>
+        <span style="font-size:.8rem;color:var(--text-secondary);margin-left:auto"><strong id="pgHospSelectedCount">0</strong> rumah sakit dipilih</span>
+      </div>
+      <div id="pgHospitalChecklist" style="max-height:160px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;border-top:1px solid var(--border);padding-top:8px"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:14px;align-items:center">
+      <button class="btn btn-primary" onclick="executePeerGroupAnalysis()"><i class="fas fa-calculator"></i> Jalankan Analisis Peer Group</button>
+      <button class="btn btn-secondary" onclick="resetPeerGroupFilters()"><i class="fas fa-undo"></i> Reset Filter</button>
+      <span id="pgAnalysisStatus" style="font-size:.85rem;color:var(--text-secondary);margin-left:auto"></span>
+    </div>
+  </div>
+
+  <!-- HASIL ANALISIS PEER GROUP -->
+  <div id="pgAnalysisResult" style="display:none">
+    <!-- Top Action Buttons -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:#f8fafc;padding:10px 14px;border:1px solid var(--border);border-radius:8px">
+      <div style="font-weight:700;color:var(--primary);font-size:.95rem"><i class="fas fa-check-circle"></i> Hasil Analisis Peer Group Siap</div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="printPeerGroupReport()"><i class="fas fa-print"></i> Cetak Laporan Formal</button>
+        <button class="btn btn-secondary btn-sm" onclick="pdfPeerGroupReport()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+        <button class="btn btn-success btn-sm" onclick="exportPeerGroupExcel()"><i class="fas fa-file-excel"></i> Export Excel (9 Sheet)</button>
+        <button class="btn btn-primary btn-sm" onclick="openPublishPeerGroupModal()"><i class="fas fa-paper-plane"></i> Terbitkan &amp; Kirim Laporan</button>
+      </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px">
+      <div class="card" style="padding:12px;border-left:4px solid var(--primary);margin:0">
+        <div style="font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">Peserta Terpilih</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+          <span style="font-size:1.6rem;font-weight:800;color:var(--primary)" id="pgKpiSelected">0</span>
+          <span style="font-size:.82rem;color:var(--text-secondary)" id="pgKpiValidDetail">(0 valid / 0 data)</span>
+        </div>
+        <div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px" id="pgKpiExcludedDetail">0 peserta dikecualikan</div>
+      </div>
+      <div class="card" style="padding:12px;border-left:4px solid #10b981;margin:0">
+        <div style="font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">Robust Mean (Algorithm A)</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#10b981;margin-top:4px" id="pgKpiRobustMean">-</div>
+        <div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px" id="pgKpiRobustSdDetail">Robust SD: - | Ketidakpastian u: -</div>
+      </div>
+      <div class="card" style="padding:12px;border-left:4px solid #f59e0b;margin:0">
+        <div style="font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">Target Assigned &amp; SDPA</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#f59e0b;margin-top:4px" id="pgKpiTargetVal">-</div>
+        <div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px" id="pgKpiSdpaDetail">SDPA: - (Skor Relatif Peer Group)</div>
+      </div>
+      <div class="card" style="padding:12px;border-left:4px solid #6366f1;margin:0">
+        <div style="font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;font-weight:600">Distribusi Evaluasi Mutu</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:.82rem">
+          <span class="badge badge-success" id="pgKpiDistSatisfactory">0 Memuaskan</span>
+          <span class="badge badge-warning" id="pgKpiDistWarning">0 Peringatan</span>
+          <span class="badge badge-danger" id="pgKpiDistAction">0 Tindakan</span>
+        </div>
+        <div style="font-size:.75rem;color:var(--text-secondary);margin-top:4px" id="pgKpiStatNotes">Kelayakan statistik normal</div>
+      </div>
+    </div>
+
+    <!-- Grafik Grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-bottom:16px">
+      <div class="card" style="margin:0;padding:12px">
+        <h4 style="margin:0 0 8px;font-size:.88rem;color:var(--text-primary)"><i class="fas fa-chart-bar"></i> Sebaran Hasil Peserta &amp; Nilai Acuan</h4>
+        <div style="position:relative;height:240px"><canvas id="chartPgDistribution"></canvas></div>
+      </div>
+      <div class="card" style="margin:0;padding:12px">
+        <h4 style="margin:0 0 8px;font-size:.88rem;color:var(--text-primary)"><i class="fas fa-chart-line"></i> Skor Relatif / Z-Score tiap Rumah Sakit</h4>
+        <div style="position:relative;height:240px"><canvas id="chartPgZScore"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tab Navigasi Tabel -->
+    <div style="display:flex;gap:6px;border-bottom:2px solid var(--border);margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-primary pg-tab-btn" id="pgTabBtn1" onclick="switchPgTab(1)"><i class="fas fa-table"></i> 1. Rekap Data Individual</button>
+      <button class="btn btn-sm btn-outline pg-tab-btn" id="pgTabBtn2" onclick="switchPgTab(2)"><i class="fas fa-calculator"></i> 2. Statistik Kelompok (ISO 13528)</button>
+      <button class="btn btn-sm btn-outline pg-tab-btn" id="pgTabBtn3" onclick="switchPgTab(3)"><i class="fas fa-award"></i> 3. Evaluasi Z-Score &amp; Skor Relatif</button>
+      <button class="btn btn-sm btn-outline pg-tab-btn" id="pgTabBtn4" onclick="switchPgTab(4)"><i class="fas fa-percentage"></i> 4. Evaluasi Sigma Metrik Lab</button>
+    </div>
+
+    <!-- Tab 1: Rekap Data Individual -->
+    <div class="pg-tab-content" id="pgTabContent1">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Rumah Sakit / Lab</th><th>Parameter</th><th>Level</th><th>Nilai QC Asli</th><th>Nilai Dipakai</th><th>Satuan</th><th>Alat / Analyzer</th><th>Metode</th><th>Lot Kontrol</th><th>Sumber Data</th><th>Status Validasi</th><th>Keterangan / Alasan</th></tr>
+          </thead>
+          <tbody id="pgTableIndividualBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Statistik Kelompok -->
+    <div class="pg-tab-content" id="pgTabContent2" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Indikator Statistik</th><th>Nilai</th><th>Keterangan &amp; Metodologi (ISO 13528:2022)</th></tr>
+          </thead>
+          <tbody id="pgTableStatsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Evaluasi Z-Score & Skor Relatif -->
+    <div class="pg-tab-content" id="pgTabContent3" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Rumah Sakit / Lab</th><th>Nilai QC</th><th>Target (Assigned)</th><th>SDPA Acuan</th><th>Selisih</th><th>Z-Score Formal PME</th><th>Skor Relatif Peer Group</th><th>Kategori Evaluasi</th><th>Rekomendasi Mutu</th></tr>
+          </thead>
+          <tbody id="pgTableEvaluationBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Evaluasi Sigma Metrik Medis -->
+    <div class="pg-tab-content" id="pgTabContent4" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Rumah Sakit / Lab</th><th>Parameter</th><th>Nilai Target</th><th>Bias Absolut</th><th>Bias Relatif (%)</th><th>Imprecision CV Lab (%)</th><th>TEa (%)</th><th>Sumber TEa</th><th>Nilai Sigma</th><th>Kategori Sigma</th><th>Status / Tindak Lanjut</th></tr>
+          </thead>
+          <tbody id="pgTableSigmaBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div></div>
+</div>
+
+<!-- ===================== PAGE: LAPORAN ANALISA PEER GROUP (USER) ===================== -->
+<div class="page" id="pagePeerreports">
+<div class="card"><div class="card-header"><h3><i class="fas fa-file-medical-alt"></i> Laporan Analisa Peer Group (PME / PMI)</h3>
+<div style="font-size:.82rem;color:var(--text-secondary)"><i class="fas fa-lock"></i> Laporan resmi evaluasi mutu antar-laboratorium yang ditujukan untuk fasyankes Anda</div></div>
+<div class="card-body">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:.85rem;color:var(--text-secondary)">Setiap laporan memuat performa laboratorium Anda, ringkasan peer group, Z-score/skor relatif, dan sigma metrik.</div>
+    <button class="btn btn-secondary btn-sm" onclick="loadPeerReportsPage()"><i class="fas fa-sync-alt"></i> Refresh Laporan</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>No</th><th>Tanggal Terbit</th><th>Judul Laporan Evaluasi</th><th>Parameter</th><th>Level</th><th>Periode</th><th>Kategori Evaluasi Anda</th><th>Nilai Sigma</th><th>Status</th><th>Aksi</th></tr>
+      </thead>
+      <tbody id="peerReportsTableBody"></tbody>
+    </table>
+  </div>
+</div></div>
+</div>
+
+<!-- MODAL: DETAIL LAPORAN PEER GROUP INDIVIDUAL -->
+<div class="modal-overlay" id="modalPeerReportDetail"><div class="modal modal-lg"><div class="modal-header"><h3 id="mPeerRptTitle">Laporan Evaluasi Peer Group</h3><button class="modal-close" onclick="clM('modalPeerReportDetail')">&times;</button></div>
+<div class="modal-body" style="max-height:78vh;overflow-y:auto" id="mPeerRptBody">
+  <div id="mPeerRptKopContainer"></div>
+  <div id="mPeerRptContent"></div>
+</div>
+<div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end">
+  <button class="btn btn-secondary" onclick="printModalPeerReport()"><i class="fas fa-print"></i> Cetak Dokumen Formal</button>
+  <button class="btn btn-secondary" onclick="pdfModalPeerReport()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+  <button class="btn btn-primary" onclick="clM('modalPeerReportDetail')">Tutup</button>
+</div>
+</div></div>
+
+<!-- MODAL: TERBITKAN & DISTRIBUSI LAPORAN PEER GROUP (SUPERADMIN) -->
+<div class="modal-overlay" id="modalPublishPeerReport"><div class="modal"><div class="modal-header"><h3><i class="fas fa-paper-plane"></i> Terbitkan &amp; Kirim Laporan Peer Group</h3><button class="modal-close" onclick="clM('modalPublishPeerReport')">&times;</button></div>
+<div class="modal-body">
+  <div class="form-group"><label>Judul Laporan Resmi *</label><input type="text" id="mPubTitle"></div>
+  <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;margin-bottom:12px;font-size:.82rem">
+    <div><strong>Parameter:</strong> <span id="mPubParam">-</span> | <strong>Level:</strong> <span id="mPubLevel">-</span></div>
+    <div><strong>Target Acuan:</strong> <span id="mPubTarget">-</span> | <strong>SDPA:</strong> <span id="mPubSdpa">-</span></div>
+  </div>
+  <div class="form-group"><label style="font-weight:600">Pilih Rumah Sakit Penerima Laporan:</label>
+    <div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px" id="mPubRecipientList"></div>
+  </div>
+  <div style="font-size:.78rem;color:var(--text-secondary)"><i class="fas fa-info-circle"></i> Setiap rumah sakit yang dipilih akan menerima snapshot laporan individual di menu <strong>Laporan Analisa Peer Group</strong>. Laporan ini bersifat permanen dan tidak akan berubah jika data QC harian baru ditambahkan.</div>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-secondary" onclick="clM('modalPublishPeerReport')">Batal</button>
+  <button class="btn btn-primary" onclick="submitPublishPeerReport()"><i class="fas fa-check"></i> Terbitkan &amp; Kirim Sekarang</button>
+</div>
+</div></div>
 
 <div class="page" id="pageValidasi">
 <div class="card"><div class="card-header"><h3><i class="fas fa-check-double"></i> ValidasiQC</h3>
@@ -3990,7 +4207,7 @@ var bpu=G('badgePendingUsers'); if(bpu){bpu.textContent='0';bpu.style.display='n
 ['qcFilterStart','qcFilterEnd','qcFilterBidang','qcFilterParam','qcFilterLot','histStart','histEnd','histBidang','histParam','histLot','histFilter','grafStart','grafEnd','grafBidang','grafParam','grafLot','grafSumber','grafSumberSigma','grafSiklusPME','grafTahunSiklus','grafPeriodeCS','grafPeriodeCVOpt','lapStart','lapEnd','lapBidang','lapParam','lapLot','lapAlat','trendStart','trendEnd','trendBidang','trendParam','trendLot','trendYear','hapusQCStart','hapusQCEnd','importPwd','bulkPwd','smartPwd','testEmailTo','hapusGatePwd','hapusAlasan','icParamFilter','pmeParamFilter','csParamFilter','scvParamFilter','opsBidangFilter','filterBidangParam','filterParamLot','imgPatologiStart','imgPatologiEnd','imgPatologiRM','imgPatologiNama','imgPatologiPA','pmeSiklusFilter','pmeTahunFilter'].forEach(function(id){var el=G(id); if(el) el.value='';
 });
 Object.keys(COMBOS).forEach(function(id){try{COMBOS[id].setValue('');}catch(e){}});
-['modalParam','modalLot','modalTEa','modalPME','modalCalcStats','modalSigmaCVOpt','modalValidasi','modalUser','modalImg','modalImgView','modalImgPatologi','modalRestore','modalExportDB','modalImportDB','modalMasterParam','modalMasterAlat','modalMasterMetode','modalMasterSatuan','modalMasterTea'].forEach(function(id){clM(id);
+['modalParam','modalLot','modalTEa','modalPME','modalCalcStats','modalSigmaCVOpt','modalValidasi','modalUser','modalImg','modalImgView','modalImgPatologi','modalRestore','modalExportDB','modalImportDB','modalMasterParam','modalMasterAlat','modalMasterMetode','modalMasterSatuan','modalMasterTea','modalPeerReportDetail','modalPublishPeerReport'].forEach(function(id){clM(id);
 });
 var tabChk=G('tabParamChecklist'); if(tabChk) tabChk.innerHTML='';
 var opsChk=G('opsParamChecklist'); if(opsChk) opsChk.innerHTML='';
@@ -4128,6 +4345,8 @@ var showSA=isSA&&!isSec; // fitur administrasi akun: hanya superadmin langsung
 G('navUsers').style.display=showSA?'':'none';
 G('navSettings').style.display=showSA?'':'none';
 G('viewAsWrap').style.display=showSA?'':'none';
+var npg=G('navPeerGroup'); if(npg) npg.style.display=showSA?'':'none';
+var npr=G('navPeerReports'); if(npr) npr.style.display='';
 var gmm=G('grpMultiMaster'); if(gmm) gmm.style.display=isSA?'':'none';
 var ib=G('btnImportDB'); if(ib) ib.style.display=showSA?'':'none';
 var oc=G('cardOnlineUsers'); if(oc) oc.style.display=showSA?'':'none';
@@ -4548,6 +4767,8 @@ case 'eqtraining':var etrb=G('eqTrnBody'); if(etrb) etrb.innerHTML='';
    break;
 case 'eqreports':['eqRepBrandChart','eqRepLocChart','eqRepPicChart','eqRepMaintTypeChart'].forEach(function(id){destroyChart(id);});var ers=G('eqReportStats'); if(ers) ers.innerHTML='';
    break;
+case 'peergroup':['chartPgDistribution','chartPgZScore'].forEach(function(id){destroyChart(id);});break;
+case 'peerreports':var prb=G('peerReportsTableBody'); if(prb) prb.innerHTML='';break;
 case 'smartimport':if(G('importPreview')){G('importPreview').innerHTML='';G('importPreview').style.display='none';}
           if(G('btnImportSubmit')) G('btnImportSubmit').style.display='none';
           if(G('importPwd')) G('importPwd').value='';
@@ -4583,6 +4804,8 @@ case 'imghemato':case 'imgurin':case 'imgmalaria':case 'imgbta':case'imglain':ld
    case 'mastermetode':renderMasterMetodeTable();break;
    case 'mastersatuan':renderMasterSatuanTable();break;
    case 'mastertea':renderMasterTeaTable();break;
+   case 'peergroup':loadPeerGroupPage();break;
+   case 'peerreports':loadPeerReportsPage();break;
 }
 }
 
@@ -8620,6 +8843,1310 @@ function saveEqTrn(){
   google.script.run.withSuccessHandler(function(r){hl();if(r&&r.ok){toast('Training tersimpan','success');clM('modalEqTrn');loadEqTraining();}else toast((r&&r.msg)||'Gagal','error');}).withFailureHandler(function(e){hl();toast('Error: '+(e.message||e),'error');}).saveEquipmentTraining(payload,getActiveUsername(),getActiveRole(),getLogUser());
 }
 function delEqTrn(id){ showConfirm('Hapus training ini?',function(){sl('Menghapus...');google.script.run.withSuccessHandler(function(r){hl();if(r&&r.ok){toast('Dihapus','success');loadEqTraining();}else toast((r&&r.msg)||'Gagal','error');}).withFailureHandler(function(e){hl();toast('Error: '+(e.message||e),'error');}).deleteEquipmentTraining(id,getActiveUsername(),getActiveRole(),getLogUser());}); }
+
+// ============================================================
+// MODUL PEER GROUP PME / PMI (ISO 13528:2022 & SIGMA METRIK)
+// ============================================================
+var pgFilterOpts = { hospitals: [], parameters: [], analyzers: [] };
+var lastPgAnalysis = null;
+var myPeerReportsCache = [];
+var currentModalReportDetail = null;
+
+function loadPeerGroupPage(){
+  if (getActiveRole() !== 'superadmin' || (CU && CU.isSecondary)) {
+    toast('Hanya SUPERADMIN yang dapat mengakses Peer Group PME/PMI', 'error');
+    return;
+  }
+  sl('Memuat konfigurasi Peer Group...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Gagal memuat opsi peer group', 'error');
+        return;
+      }
+      pgFilterOpts = res;
+      populatePgFilterUI();
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error memuat data peer group: ' + (err.message || err), 'error');
+    })
+    .getPeerGroupFilterOptions();
+}
+
+function populatePgFilterUI(){
+  // Parameter dropdown
+  var selParam = G('pgParam');
+  if(selParam){
+    selParam.innerHTML = '<option value="">-- Pilih Parameter --</option>' +
+      pgFilterOpts.parameters.map(function(p){
+        return '<option value="' + escH(p) + '">' + escH(p) + '</option>';
+      }).join('');
+  }
+
+  // Analyzer dropdown
+  var selAlat = G('pgAnalyzer');
+  if(selAlat){
+    selAlat.innerHTML = '<option value="">Semua Alat / Analyzer</option>' +
+      pgFilterOpts.analyzers.map(function(a){
+        return '<option value="' + escH(a) + '">' + escH(a) + '</option>';
+      }).join('');
+  }
+
+  // Default dates: 30 hari terakhir
+  var endD = new Date();
+  var startD = new Date();
+  startD.setDate(startD.getDate() - 30);
+  if(G('pgStartDate')) G('pgStartDate').value = startD.toISOString().slice(0, 10);
+  if(G('pgEndDate')) G('pgEndDate').value = endD.toISOString().slice(0, 10);
+  if(G('pgSingleDate')) G('pgSingleDate').value = endD.toISOString().slice(0, 10);
+
+  // Hospital checklist
+  renderPgHospitalChecklist();
+}
+
+function renderPgHospitalChecklist(){
+  var container = G('pgHospitalChecklist');
+  if(!container) return;
+  var q = (G('pgHospSearch') ? G('pgHospSearch').value : '').toLowerCase().trim();
+
+  var html = '';
+  pgFilterOpts.hospitals.forEach(function(h, idx){
+    var match = !q || h.displayName.toLowerCase().indexOf(q) !== -1 || h.username.toLowerCase().indexOf(q) !== -1;
+    var displayStyle = match ? 'flex' : 'none';
+    html += '<label class="pg-hosp-item" style="display:' + displayStyle + ';align-items:center;gap:6px;font-size:.82rem;padding:3px 6px;border-radius:4px;cursor:pointer;background:#f8fafc;border:1px solid #e2e8f0" data-name="' + escH(h.displayName.toLowerCase()) + '">' +
+      '<input type="checkbox" class="pg-hosp-cb" value="' + escH(h.username) + '" checked onchange="updatePgHospSelectedCount()">' +
+      '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + escH(h.displayName) + '">' + escH(h.displayName) + '</span>' +
+    '</label>';
+  });
+  container.innerHTML = html;
+  updatePgHospSelectedCount();
+}
+
+function filterPgHospitalChecklist(){
+  var q = (G('pgHospSearch') ? G('pgHospSearch').value : '').toLowerCase().trim();
+  var items = document.querySelectorAll('.pg-hosp-item');
+  items.forEach(function(el){
+    var name = el.getAttribute('data-name') || '';
+    if(!q || name.indexOf(q) !== -1){
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+function setAllPgHospitals(selectAll){
+  var cbs = document.querySelectorAll('.pg-hosp-cb');
+  cbs.forEach(function(cb){
+    // hanya yang tampak jika sedang mencari, atau semua jika tidak mencari
+    var parent = cb.closest('.pg-hosp-item');
+    if(!parent || parent.style.display !== 'none'){
+      cb.checked = selectAll;
+    }
+  });
+  updatePgHospSelectedCount();
+}
+
+function updatePgHospSelectedCount(){
+  var cbs = document.querySelectorAll('.pg-hosp-cb:checked');
+  if(G('pgHospSelectedCount')){
+    G('pgHospSelectedCount').textContent = cbs.length;
+  }
+}
+
+function onPgParamChange(){
+  // Bisa disesuaikan jika ingin filter lot atau alat berdasarkan parameter
+}
+
+function applyPgDatePreset(){
+  var preset = G('pgDatePreset') ? G('pgDatePreset').value : 'custom';
+  var now = new Date();
+  var start = new Date();
+  var end = new Date();
+
+  if(preset === 'today'){
+    start = now;
+    end = now;
+  } else if(preset === '7d'){
+    start.setDate(now.getDate() - 7);
+  } else if(preset === '30d'){
+    start.setDate(now.getDate() - 30);
+  } else if(preset === 'this_month'){
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else if(preset === 'last_month'){
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    end = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if(preset === 'ytd'){
+    start = new Date(now.getFullYear(), 0, 1);
+  } else {
+    return; // custom
+  }
+
+  function toISO(d){
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+
+  if(G('pgStartDate')) G('pgStartDate').value = toISO(start);
+  if(G('pgEndDate')) G('pgEndDate').value = toISO(end);
+}
+
+function togglePgSingleDate(){
+  var agg = G('pgAggRule') ? G('pgAggRule').value : 'latest';
+  var wrap = G('pgSingleDateWrap');
+  if(wrap){
+    wrap.style.display = (agg === 'single_date') ? 'block' : 'none';
+  }
+}
+
+function togglePgTargetInputs(){
+  var t = G('pgTargetType') ? G('pgTargetType').value : 'robust_mean';
+  var wrap = G('pgCustomTargetWrap');
+  if(wrap){
+    wrap.style.display = (t !== 'robust_mean') ? 'block' : 'none';
+  }
+}
+
+function togglePgSdpaInputs(){
+  var s = G('pgSdpaType') ? G('pgSdpaType').value : 'robust_sd';
+  var wrap = G('pgCustomSdpaWrap');
+  if(wrap){
+    wrap.style.display = (s === 'fixed_sdpa') ? 'block' : 'none';
+  }
+}
+
+function resetPeerGroupFilters(){
+  if(G('pgParam')) G('pgParam').value = '';
+  if(G('pgLevel')) G('pgLevel').value = 'L1';
+  if(G('pgDatePreset')) G('pgDatePreset').value = '30d';
+  applyPgDatePreset();
+  if(G('pgAggRule')) G('pgAggRule').value = 'latest';
+  togglePgSingleDate();
+  if(G('pgAnalyzer')) G('pgAnalyzer').value = '';
+  if(G('pgTargetType')) G('pgTargetType').value = 'robust_mean';
+  togglePgTargetInputs();
+  if(G('pgAssignedVal')) G('pgAssignedVal').value = '';
+  if(G('pgSdpaType')) G('pgSdpaType').value = 'robust_sd';
+  togglePgSdpaInputs();
+  if(G('pgSdpaVal')) G('pgSdpaVal').value = '';
+  setAllPgHospitals(true);
+  if(G('pgAnalysisResult')) G('pgAnalysisResult').style.display = 'none';
+}
+
+function executePeerGroupAnalysis(){
+  var param = G('pgParam') ? G('pgParam').value : '';
+  if(!param){
+    toast('Silakan pilih parameter pemeriksaan terlebih dahulu', 'warning');
+    return;
+  }
+  var startDate = G('pgStartDate') ? G('pgStartDate').value : '';
+  var endDate = G('pgEndDate') ? G('pgEndDate').value : '';
+  if(!startDate || !endDate){
+    toast('Rentang tanggal wajib diisi', 'warning');
+    return;
+  }
+
+  var cbs = document.querySelectorAll('.pg-hosp-cb:checked');
+  var hospitals = [];
+  cbs.forEach(function(c){ hospitals.push(c.value); });
+  if(hospitals.length === 0){
+    toast('Minimal 1 rumah sakit/laboratorium peserta harus dipilih', 'warning');
+    return;
+  }
+
+  var aggRule = G('pgAggRule') ? G('pgAggRule').value : 'latest';
+  var singleDate = (aggRule === 'single_date' && G('pgSingleDate')) ? G('pgSingleDate').value : null;
+
+  var targetType = G('pgTargetType') ? G('pgTargetType').value : 'robust_mean';
+  var assignedVal = (targetType !== 'robust_mean' && G('pgAssignedVal')) ? parseFloat(G('pgAssignedVal').value) : null;
+
+  var sdpaType = G('pgSdpaType') ? G('pgSdpaType').value : 'robust_sd';
+  var sdpaVal = (sdpaType === 'fixed_sdpa' && G('pgSdpaVal')) ? parseFloat(G('pgSdpaVal').value) : null;
+
+  var payload = {
+    parameter: param,
+    level: G('pgLevel') ? G('pgLevel').value : 'L1',
+    startDate: startDate,
+    endDate: endDate,
+    aggregationRule: aggRule,
+    singleDate: singleDate,
+    analyzer: G('pgAnalyzer') ? G('pgAnalyzer').value : '',
+    targetType: targetType,
+    assignedValue: assignedVal,
+    sdpaType: sdpaType,
+    sdpaValue: sdpaVal,
+    hospitals: hospitals
+  };
+
+  sl('Menjalankan Analisis Robust ISO 13528:2022 Algorithm A...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Analisis gagal dijalankan', 'error');
+        return;
+      }
+      lastPgAnalysis = res;
+      renderPgAnalysisResult(res);
+      toast('Analisis Peer Group ISO 13528:2022 berhasil dihitung', 'success');
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error saat analisis: ' + (err.message || err), 'error');
+    })
+    .runPeerGroupAnalysis(payload);
+}
+
+function renderPgAnalysisResult(res){
+  var sec = G('pgAnalysisResult');
+  if(sec) sec.style.display = 'block';
+
+  var stats = res.stats;
+  var cfg = res.config;
+  var evals = res.evaluations || [];
+
+  // Update KPI Cards
+  if(G('pgKpiSelected')) G('pgKpiSelected').textContent = stats.totalSelected;
+  if(G('pgKpiValidDetail')) G('pgKpiValidDetail').textContent = '(' + stats.totalValid + ' valid / ' + stats.totalWithData + ' data)';
+  if(G('pgKpiExcludedDetail')) G('pgKpiExcludedDetail').textContent = stats.totalExcluded + ' peserta tanpa data valid';
+
+  if(G('pgKpiRobustMean')) {
+    G('pgKpiRobustMean').textContent = stats.robust.robustMean !== null ? stats.robust.robustMean.toFixed(2) : '-';
+  }
+  if(G('pgKpiRobustSdDetail')) {
+    var uStr = stats.robust.uncertainty !== null ? stats.robust.uncertainty.toFixed(4) : '-';
+    var rSdStr = stats.robust.robustSd !== null ? stats.robust.robustSd.toFixed(3) : '-';
+    G('pgKpiRobustSdDetail').textContent = 'Robust SD (s*): ' + rSdStr + ' | Ketidakpastian u(x*): ' + uStr;
+  }
+
+  if(G('pgKpiTargetVal')) {
+    G('pgKpiTargetVal').textContent = cfg.assignedValue !== null ? cfg.assignedValue.toFixed(2) : '-';
+  }
+  if(G('pgKpiSdpaDetail')) {
+    var sdpaStr = cfg.sdpaValue !== null ? cfg.sdpaValue.toFixed(3) : '-';
+    var modeStr = cfg.isFormalPme ? ' (SDPA Formal PME)' : ' (Skor Relatif Peer Group)';
+    G('pgKpiSdpaDetail').textContent = 'SDPA: ' + sdpaStr + modeStr;
+  }
+
+  // Hitung jumlah kategori evaluasi
+  var countSat = 0, countWarn = 0, countAct = 0;
+  evals.forEach(function(e){
+    if(e.evalCategory === 'satisfactory') countSat++;
+    else if(e.evalCategory === 'warning') countWarn++;
+    else if(e.evalCategory === 'action') countAct++;
+  });
+  if(G('pgKpiDistSatisfactory')) G('pgKpiDistSatisfactory').textContent = countSat + ' Memuaskan';
+  if(G('pgKpiDistWarning')) G('pgKpiDistWarning').textContent = countWarn + ' Peringatan';
+  if(G('pgKpiDistAction')) G('pgKpiDistAction').textContent = countAct + ' Tindakan';
+  if(G('pgKpiStatNotes')) G('pgKpiStatNotes').textContent = stats.robust.notes || 'Algoritma A konvergen.';
+
+  // Render Charts
+  renderPgCharts(res);
+
+  // Render Tab Tables
+  renderPgIndividualTable(res);
+  renderPgStatsTable(res);
+  renderPgEvaluationTable(res);
+  renderPgSigmaTable(res);
+
+  // Default to Tab 1
+  switchPgTab(1);
+}
+
+function switchPgTab(idx){
+  for(var i=1; i<=4; i++){
+    var btn = G('pgTabBtn' + i);
+    var content = G('pgTabContent' + i);
+    if(btn){
+      if(i === idx){
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+      } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline');
+      }
+    }
+    if(content){
+      content.style.display = (i === idx) ? 'block' : 'none';
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// Render Tabel Tab 1: Rekap Data Individual
+// ------------------------------------------------------------
+function renderPgIndividualTable(res){
+  var tb = G('pgTableIndividualBody');
+  if(!tb) return;
+  var evals = res.evaluations || [];
+  if(evals.length === 0){
+    tb.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text-secondary)">Tidak ada data peserta</td></tr>';
+    return;
+  }
+
+  var html = '';
+  evals.forEach(function(e, i){
+    var stBadge = e.validationStatus === 'valid'
+      ? '<span class="badge badge-success">Valid</span>'
+      : '<span class="badge badge-danger">Dikecualikan</span>';
+    var origVal = e.originalValue !== null ? e.originalValue.toFixed(2) : '-';
+    var usedVal = e.usedValue !== null ? '<strong>' + e.usedValue.toFixed(2) + '</strong>' : '<span style="color:#ef4444">-</span>';
+
+    html += '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong><br><small style="color:var(--text-secondary)">@' + escH(e.hospitalUsername) + '</small></td>' +
+      '<td>' + escH(res.config.parameter) + '</td>' +
+      '<td><span class="badge badge-secondary">' + escH(res.config.level) + '</span></td>' +
+      '<td>' + origVal + '</td>' +
+      '<td>' + usedVal + '</td>' +
+      '<td>' + escH(e.unit || '-') + '</td>' +
+      '<td>' + escH(e.analyzer || '-') + '</td>' +
+      '<td>' + escH(e.method || '-') + '</td>' +
+      '<td>' + escH(e.controlLot || '-') + '</td>' +
+      '<td>' + (e.sourceCount || 0) + ' record (' + escH(e.date || '-') + ')</td>' +
+      '<td>' + stBadge + '</td>' +
+      '<td style="font-size:.78rem;color:var(--text-secondary)">' + escH(e.exclusionReason || 'Sesuai kriteria') + '</td>' +
+    '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+// ------------------------------------------------------------
+// Render Tabel Tab 2: Statistik Kelompok (ISO 13528:2022)
+// ------------------------------------------------------------
+function renderPgStatsTable(res){
+  var tb = G('pgTableStatsBody');
+  if(!tb) return;
+  var d = res.stats.descriptive;
+  var r = res.stats.robust;
+  var cfg = res.config;
+
+  var rows = [
+    { name: 'Jumlah Peserta Terpilih (p)', val: res.stats.totalSelected, note: 'Total rumah sakit/lab yang masuk dalam kriteria filter' },
+    { name: 'Jumlah Data Peserta Valid (p*)', val: res.stats.totalValid, note: 'Peserta yang memiliki hasil QC valid dan disertakan dalam konsensus' },
+    { name: 'Mean Aritmatika Sederhana', val: d.mean !== null ? d.mean.toFixed(4) : '-', note: 'Rata-rata klasik (rentan terhadap outlier/pencilan)' },
+    { name: 'Median Kelompok', val: d.median !== null ? d.median.toFixed(4) : '-', note: 'Nilai tengah data peserta setelah diurutkan' },
+    { name: 'Standar Deviasi Klasik (SD)', val: d.sd !== null ? d.sd.toFixed(4) : '-', note: 'Penyebaran klasik antar-laboratorium' },
+    { name: 'Koefisien Variasi Sederhana (CV%)', val: d.cv !== null ? d.cv.toFixed(2) + '%' : '-', note: 'Variabilitas relatif kelompok laboratorium' },
+    { name: 'Nilai Minimum & Maksimum', val: (d.min !== null ? d.min.toFixed(2) : '-') + ' s/d ' + (d.max !== null ? d.max.toFixed(2) : '-'), note: 'Rentang nilai ekstrem hasil uji peserta' },
+    { name: 'Interquartile Range (IQR)', val: d.iqr !== null ? d.iqr.toFixed(4) : '-', note: 'Q3 - Q1 (Rentang interkuartil)' },
+    { name: 'Median Absolute Deviation (MAD)', val: d.mad !== null ? d.mad.toFixed(4) : '-', note: 'Median dari selisih absolut terhadap median data' },
+    { name: 'Normalised IQR (nIQR)', val: d.niqr !== null ? d.niqr.toFixed(4) : '-', note: '0.7413 x IQR (Estimasi robust awal sebelum iterasi Algorithm A)' },
+    { name: 'Robust Mean (x*) — ISO 13528:2022', val: '<strong style="color:var(--primary);font-size:1.05rem">' + (r.robustMean !== null ? r.robustMean.toFixed(4) : '-') + '</strong>', note: 'Hasil estimasi lokasi konsensus robust melalui proses penyesuaian iteratif (winsorization)' },
+    { name: 'Robust SD (s*) — ISO 13528:2022', val: '<strong style="color:#10b981;font-size:1.05rem">' + (r.robustSd !== null ? r.robustSd.toFixed(4) : '-') + '</strong>', note: 'Standar deviasi robust konsensus kelompok' },
+    { name: 'Ketidakpastian Standar Konsensus u(x*)', val: '<span class="badge badge-info">' + (r.uncertainty !== null ? r.uncertainty.toFixed(4) : '-') + '</span>', note: 'Formula ISO 13528: u(x*) = 1.25 x (s* / sqrt(p*))' },
+    { name: 'Nilai Target Ditetapkan (Assigned Value, X)', val: '<strong style="color:#d97706">' + (cfg.assignedValue !== null ? cfg.assignedValue.toFixed(4) : '-') + '</strong>', note: escH(cfg.assignedValueSource) },
+    { name: 'SDPA Acuan Evaluasi', val: '<strong style="color:#6366f1">' + (cfg.sdpaValue !== null ? cfg.sdpaValue.toFixed(4) : '-') + '</strong>', note: escH(cfg.sdpaSource) },
+    { name: 'Status Integritas Statistik ISO', val: '<span class="badge badge-success">' + escH(r.statStatus) + '</span>', note: escH(r.notes) }
+  ];
+
+  var html = '';
+  rows.forEach(function(row){
+    html += '<tr>' +
+      '<td><strong>' + row.name + '</strong></td>' +
+      '<td>' + row.val + '</td>' +
+      '<td style="color:var(--text-secondary);font-size:.82rem">' + row.note + '</td>' +
+    '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+// ------------------------------------------------------------
+// Render Tabel Tab 3: Evaluasi Z-Score & Skor Relatif
+// ------------------------------------------------------------
+function renderPgEvaluationTable(res){
+  var tb = G('pgTableEvaluationBody');
+  if(!tb) return;
+  var evals = res.evaluations || [];
+  if(evals.length === 0){
+    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-secondary)">Tidak ada data evaluasi</td></tr>';
+    return;
+  }
+
+  var html = '';
+  evals.forEach(function(e, i){
+    var catBadge = '';
+    if(e.evalCategory === 'satisfactory'){
+      catBadge = '<span class="badge badge-success"><i class="fas fa-check"></i> Memuaskan</span>';
+    } else if(e.evalCategory === 'warning'){
+      catBadge = '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Peringatan</span>';
+    } else if(e.evalCategory === 'action'){
+      catBadge = '<span class="badge badge-danger"><i class="fas fa-times-circle"></i> Tindakan</span>';
+    } else {
+      catBadge = '<span class="badge badge-secondary">-</span>';
+    }
+
+    var zFormalStr = (e.zScore !== null)
+      ? '<strong>' + (e.zScore >= 0 ? '+' : '') + e.zScore.toFixed(2) + '</strong>'
+      : '<span style="color:var(--text-secondary);font-size:.78rem">SDPA Formal belum ditetapkan</span>';
+
+    var zRelStr = (e.peerRelativeScore !== null)
+      ? '<span style="font-weight:600">' + (e.peerRelativeScore >= 0 ? '+' : '') + e.peerRelativeScore.toFixed(2) + '</span>'
+      : '-';
+
+    var diffStr = e.diffTarget !== null ? (e.diffTarget >= 0 ? '+' : '') + e.diffTarget.toFixed(2) : '-';
+
+    html += '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong><br><small style="color:var(--text-secondary)">@' + escH(e.hospitalUsername) + '</small></td>' +
+      '<td>' + (e.usedValue !== null ? e.usedValue.toFixed(2) : '-') + '</td>' +
+      '<td>' + (res.config.assignedValue !== null ? res.config.assignedValue.toFixed(2) : '-') + '</td>' +
+      '<td>' + (res.config.sdpaValue !== null ? res.config.sdpaValue.toFixed(3) : '-') + '</td>' +
+      '<td>' + diffStr + '</td>' +
+      '<td>' + zFormalStr + '</td>' +
+      '<td>' + zRelStr + '</td>' +
+      '<td>' + catBadge + '</td>' +
+      '<td style="font-size:.78rem">' + escH(e.recommendation || '-') + '</td>' +
+    '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+// ------------------------------------------------------------
+// Render Tabel Tab 4: Evaluasi Sigma Metrik Medis
+// ------------------------------------------------------------
+function renderPgSigmaTable(res){
+  var tb = G('pgTableSigmaBody');
+  if(!tb) return;
+  var evals = res.evaluations || [];
+  if(evals.length === 0){
+    tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-secondary)">Tidak ada data sigma metrik</td></tr>';
+    return;
+  }
+
+  var html = '';
+  evals.forEach(function(e, i){
+    var sigBadge = '';
+    var sigColor = '#64748b';
+    if(e.sigmaCategory === 'World Class') sigColor = '#047857';
+    else if(e.sigmaCategory === 'Excellent') sigColor = '#2563eb';
+    else if(e.sigmaCategory === 'Good') sigColor = '#7c3aed';
+    else if(e.sigmaCategory === 'Marginal') sigColor = '#f59e0b';
+    else if(e.sigmaCategory === 'Poor' || e.sigmaCategory === 'Unacceptable') sigColor = '#dc2626';
+
+    if(e.sigma !== null){
+      sigBadge = '<span style="font-weight:700;color:' + sigColor + '">' + e.sigma.toFixed(2) + ' σ</span><br><small style="color:' + sigColor + '">' + escH(e.sigmaCategory) + '</small>';
+    } else {
+      sigBadge = '<span style="color:var(--text-secondary);font-size:.78rem">' + escH(e.sigmaCategory || 'Data Tidak Lengkap') + '</span>';
+    }
+
+    var biasAbsStr = e.biasAbs !== null ? e.biasAbs.toFixed(2) : '-';
+    var biasPctStr = e.biasPct !== null ? e.biasPct.toFixed(2) + '%' : '-';
+    var cvLabStr = e.cvLab !== null ? e.cvLab.toFixed(2) + '%' : '<span style="color:var(--text-secondary)">N/A (harian)</span>';
+    var teaStr = e.tea !== null ? e.tea.toFixed(1) + '%' : '-';
+
+    html += '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong></td>' +
+      '<td>' + escH(res.config.parameter) + '</td>' +
+      '<td>' + (res.config.assignedValue !== null ? res.config.assignedValue.toFixed(2) : '-') + '</td>' +
+      '<td>' + biasAbsStr + '</td>' +
+      '<td>' + biasPctStr + '</td>' +
+      '<td>' + cvLabStr + '</td>' +
+      '<td>' + teaStr + '</td>' +
+      '<td style="font-size:.75rem;color:var(--text-secondary)">' + escH(e.teaSource || 'Belum diisi') + '</td>' +
+      '<td>' + sigBadge + '</td>' +
+      '<td>' + (e.sigmaCategory || '-') + '</td>' +
+      '<td style="font-size:.78rem">' + escH(e.recommendation || '-') + '</td>' +
+    '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+// ------------------------------------------------------------
+// Render Charts: Distribution & Z-Score
+// ------------------------------------------------------------
+function renderPgCharts(res){
+  var evals = res.evaluations || [];
+  var validVals = evals
+    .filter(function(e){ return e.validationStatus === 'valid' && e.usedValue !== null; })
+    .map(function(e){ return e.usedValue; });
+
+  // 1. Chart Sebaran Hasil Peserta (Histogram Sederhana)
+  destroyChart('chartPgDistribution');
+  var ctxDist = G('chartPgDistribution');
+  if(ctxDist && validVals.length > 0){
+    // Buat bins untuk histogram
+    var min = Math.min.apply(null, validVals);
+    var max = Math.max.apply(null, validVals);
+    var numBins = Math.min(8, Math.max(3, Math.ceil(Math.sqrt(validVals.length))));
+    var step = (max - min) / numBins;
+    if(step === 0) step = 1;
+
+    var binLabels = [];
+    var binCounts = [];
+    for(var b=0; b<numBins; b++){
+      var bStart = min + b * step;
+      var bEnd = bStart + step;
+      binLabels.push(bStart.toFixed(1) + ' - ' + bEnd.toFixed(1));
+      var count = validVals.filter(function(v){
+        return (b === numBins - 1) ? (v >= bStart && v <= bEnd) : (v >= bStart && v < bEnd);
+      }).length;
+      binCounts.push(count);
+    }
+
+    chartInstances['chartPgDistribution'] = new Chart(ctxDist, {
+      type: 'bar',
+      data: {
+        labels: binLabels,
+        datasets: [{
+          label: 'Jumlah Laboratorium (Frekuensi)',
+          data: binCounts,
+          backgroundColor: 'rgba(99, 102, 241, 0.6)',
+          borderColor: '#6366f1',
+          borderWidth: 1.5,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              footer: function(){
+                return 'Robust Mean (x*): ' + (res.stats.robust.robustMean ? res.stats.robust.robustMean.toFixed(2) : '-');
+              }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { title: { display: true, text: 'Rentang Nilai QC Peserta' } }
+        }
+      }
+    });
+  }
+
+  // 2. Chart Skor Relatif / Z-Score tiap Laboratorium
+  destroyChart('chartPgZScore');
+  var ctxZ = G('chartPgZScore');
+  if(ctxZ && evals.length > 0){
+    var validEvals = evals.filter(function(e){ return e.validationStatus === 'valid' && (e.zScore !== null || e.peerRelativeScore !== null); });
+    var hospLabels = validEvals.map(function(e){ return e.hospitalName.length > 15 ? e.hospitalName.slice(0, 15) + '...' : e.hospitalName; });
+    var scoreData = validEvals.map(function(e){ return e.zScore !== null ? e.zScore : e.peerRelativeScore; });
+    var scoreColors = scoreData.map(function(s){
+      var abs = Math.abs(s);
+      if(abs <= 2) return '#10b981'; // Hijau
+      if(abs <= 3) return '#f59e0b'; // Kuning
+      return '#ef4444'; // Merah
+    });
+
+    chartInstances['chartPgZScore'] = new Chart(ctxZ, {
+      type: 'bar',
+      data: {
+        labels: hospLabels,
+        datasets: [{
+          label: res.config.isFormalPme ? 'Z-Score Formal PME' : 'Skor Relatif Peer Group',
+          data: scoreData,
+          backgroundColor: scoreColors,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            suggestedMin: -3.5,
+            suggestedMax: 3.5,
+            grid: {
+              color: function(ctx){
+                if(ctx.tick.value === 0) return '#333';
+                if(Math.abs(ctx.tick.value) === 2) return 'rgba(245, 158, 11, 0.4)';
+                if(Math.abs(ctx.tick.value) === 3) return 'rgba(239, 68, 68, 0.4)';
+                return 'rgba(0,0,0,0.05)';
+              }
+            },
+            title: { display: true, text: 'Deviasi Skor (Batasan: ±2 & ±3)' }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ------------------------------------------------------------
+// EXPORT EXCEL 9 SHEET (XLSX)
+// ------------------------------------------------------------
+function exportPeerGroupExcel(){
+  if(!lastPgAnalysis || !lastPgAnalysis.config){
+    toast('Belum ada hasil analisis untuk diekspor', 'warning');
+    return;
+  }
+  if(typeof XLSX === 'undefined'){
+    toast('Library SheetJS (XLSX) tidak tersedia', 'error');
+    return;
+  }
+
+  var res = lastPgAnalysis;
+  var cfg = res.config;
+  var stats = res.stats;
+  var evals = res.evaluations || [];
+
+  var wb = XLSX.utils.book_new();
+
+  // Sheet 1: Ringkasan Eksekutif & Filter
+  var s1 = [
+    ['LAPORAN EVALUASI MUTU PEER GROUP PME / PMI (ISO 13528:2022)'],
+    ['DIDIQC Quality Control Management System'],
+    ['Tanggal Export:', new Date().toLocaleString('id-ID')],
+    [''],
+    ['PARAMETER & PERIODE EVALUASI'],
+    ['Parameter Pemeriksaan', cfg.parameter],
+    ['Level Kontrol QC', cfg.level],
+    ['Rentang Periode', cfg.startDate + ' s/d ' + cfg.endDate],
+    ['Aturan Agregasi Data', cfg.aggregationRule],
+    ['Filter Analyzer / Alat', cfg.analyzer || 'Semua Alat'],
+    [''],
+    ['PENETAPAN TARGET & SDPA'],
+    ['Dasar Nilai Target (Assigned Value, X)', cfg.assignedValueSource],
+    ['Nilai Target Ditetapkan (X)', cfg.assignedValue],
+    ['Dasar SDPA (sigma_pt)', cfg.sdpaSource],
+    ['Nilai SDPA', cfg.sdpaValue],
+    ['Tipe Evaluasi', cfg.isFormalPme ? 'Z-score Formal PME' : 'Skor Relatif Peer Group'],
+    [''],
+    ['RINGKASAN PARTISIPASI & KINERJA'],
+    ['Total Rumah Sakit Terpilih', stats.totalSelected],
+    ['Total Rumah Sakit dengan Data Valid', stats.totalValid],
+    ['Total Rumah Sakit Dikecualikan', stats.totalExcluded],
+    ['Robust Mean Kelompok (x*)', stats.robust.robustMean],
+    ['Robust SD Kelompok (s*)', stats.robust.robustSd],
+    ['Ketidakpastian Standar u(x*)', stats.robust.uncertainty],
+    ['Status Konsensus ISO 13528', stats.robust.statStatus]
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s1), 'Ringkasan & Filter');
+
+  // Sheet 2: Data Mentah Peserta
+  var s2 = [
+    ['No', 'Username Lab', 'Nama Rumah Sakit / Fasyankes', 'Parameter', 'Level', 'Tanggal QC', 'Nilai QC Asli', 'Satuan', 'Alat / Analyzer', 'Metode', 'No. Lot QC', 'Status Validasi', 'Alasan Pengecualian']
+  ];
+  evals.forEach(function(e, i){
+    s2.push([
+      i + 1,
+      e.hospitalUsername,
+      e.hospitalName,
+      cfg.parameter,
+      cfg.level,
+      e.date || '-',
+      e.originalValue,
+      e.unit || '-',
+      e.analyzer || '-',
+      e.method || '-',
+      e.controlLot || '-',
+      e.validationStatus,
+      e.exclusionReason || '-'
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s2), 'Data Mentah Peserta');
+
+  // Sheet 3: Data Agregasi per Lab
+  var s3 = [
+    ['No', 'Username Lab', 'Nama Rumah Sakit', 'Aturan Agregasi', 'Jumlah Data Sumber', 'Nilai Dipakai (Konsensus)', 'Status Validasi']
+  ];
+  evals.forEach(function(e, i){
+    s3.push([
+      i + 1,
+      e.hospitalUsername,
+      e.hospitalName,
+      cfg.aggregationRule,
+      e.sourceCount || 0,
+      e.usedValue,
+      e.validationStatus
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s3), 'Data Agregasi per Lab');
+
+  // Sheet 4: Statistik Deskriptif & Robust
+  var d = stats.descriptive;
+  var r = stats.robust;
+  var s4 = [
+    ['Metrik Statistik', 'Nilai', 'Formula / Keterangan ISO 13528:2022'],
+    ['Jumlah Peserta Terpilih (p)', stats.totalSelected, 'Jumlah lab yang masuk filter'],
+    ['Jumlah Peserta Valid (p*)', stats.totalValid, 'Peserta yang disertakan dalam estimasi konsensus'],
+    ['Mean Aritmatika Sederhana', d.mean, 'Rata-rata klasik'],
+    ['Median Kelompok', d.median, 'Nilai tengah data peserta'],
+    ['Standar Deviasi Klasik (SD)', d.sd, 'Deviasi standar klasik'],
+    ['Koefisien Variasi Sederhana (CV%)', d.cv, 'Variabilitas relatif kelompok'],
+    ['Nilai Minimum', d.min, 'Nilai terendah peserta'],
+    ['Nilai Maksimum', d.max, 'Nilai tertinggi peserta'],
+    ['Rentang (Range)', d.range, 'Max - Min'],
+    ['Kuartil 1 (Q1)', d.q1, 'Persentil ke-25'],
+    ['Kuartil 3 (Q3)', d.q3, 'Persentil ke-75'],
+    ['Interquartile Range (IQR)', d.iqr, 'Q3 - Q1'],
+    ['Median Absolute Deviation (MAD)', d.mad, 'Median |x_i - Median|'],
+    ['Normalised IQR (nIQR)', d.niqr, '0.7413 x IQR (Robust Scale Awal)'],
+    ['Robust Mean (x*) — Algorithm A', r.robustMean, 'Estimasi lokasi robust ISO 13528:2022'],
+    ['Robust SD (s*) — Algorithm A', r.robustSd, 'Estimasi dispersi robust ISO 13528:2022'],
+    ['Ketidakpastian Standar u(x*)', r.uncertainty, '1.25 x (s* / sqrt(p*))'],
+    ['Catatan Statistik', r.notes, r.statStatus]
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s4), 'Statistik Deskriptif & Robust');
+
+  // Sheet 5: Evaluasi Target & SDPA
+  var s5 = [
+    ['Komponen Evaluasi', 'Nilai', 'Keterangan Metodologis'],
+    ['Parameter', cfg.parameter, ''],
+    ['Level', cfg.level, ''],
+    ['Dasar Target (Assigned Value)', cfg.assignedValueSource, ''],
+    ['Nilai Target (X)', cfg.assignedValue, ''],
+    ['Dasar SDPA (sigma_pt)', cfg.sdpaSource, ''],
+    ['Nilai SDPA', cfg.sdpaValue, ''],
+    ['Ketidakpastian u(x*)', r.uncertainty, 'Kriteria: jika u(x*) > 0.3 sigma_pt, ketidakpastian wajib dilaporkan'],
+    ['Rasio u(x*) / SDPA', (cfg.sdpaValue && r.uncertainty) ? (r.uncertainty / cfg.sdpaValue) : '-', 'Ambang batas kelayakan: 0.3'],
+    ['Kesimpulan Kriteria SDPA', cfg.isFormalPme ? 'Memenuhi kriteria SDPA independen formal PME' : 'Menggunakan Robust SD Kelompok (hanya berlaku untuk Skor Relatif Peer Group)']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s5), 'Evaluasi Target & SDPA');
+
+  // Sheet 6: Z-Score & Skor Relatif
+  var s6 = [
+    ['No', 'Nama Rumah Sakit', 'Nilai QC Lab', 'Target (X)', 'Selisih (Lab - X)', 'SDPA Acuan', 'Z-Score Formal PME', 'Skor Relatif Peer Group', 'Kategori Kinerja', 'Rekomendasi Mutu']
+  ];
+  evals.forEach(function(e, i){
+    s6.push([
+      i + 1,
+      e.hospitalName,
+      e.usedValue,
+      cfg.assignedValue,
+      e.diffTarget,
+      cfg.sdpaValue,
+      e.zScore !== null ? e.zScore : 'Belum ditetapkan',
+      e.peerRelativeScore !== null ? e.peerRelativeScore : '-',
+      e.evalCategory,
+      e.recommendation || '-'
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s6), 'Z-Score & Skor Relatif');
+
+  // Sheet 7: Evaluasi Sigma Metrik
+  var s7 = [
+    ['No', 'Nama Rumah Sakit', 'Nilai QC', 'Target (X)', 'Bias Absolut', 'Bias Relatif (%)', 'Imprecision CV Lab (%)', 'TEa (%)', 'Sumber TEa', 'Sigma Metrik', 'Kategori Sigma', 'Rekomendasi Kontrol']
+  ];
+  evals.forEach(function(e, i){
+    s7.push([
+      i + 1,
+      e.hospitalName,
+      e.usedValue,
+      cfg.assignedValue,
+      e.biasAbs,
+      e.biasPct,
+      e.cvLab !== null ? e.cvLab : 'N/A',
+      e.tea,
+      e.teaSource || '-',
+      e.sigma !== null ? e.sigma : 'Data Belum Lengkap',
+      e.sigmaCategory,
+      e.recommendation || '-'
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s7), 'Evaluasi Sigma Metrik');
+
+  // Sheet 8: Klasifikasi Kinerja Lab
+  var countSat = evals.filter(function(e){ return e.evalCategory === 'satisfactory'; }).length;
+  var countWarn = evals.filter(function(e){ return e.evalCategory === 'warning'; }).length;
+  var countAct = evals.filter(function(e){ return e.evalCategory === 'action'; }).length;
+  var s8 = [
+    ['KLASIFIKASI KINERJA LABORATORIUM PESERTA'],
+    ['Kategori', 'Batas Kriteria Z-Score / Skor Relatif', 'Jumlah Lab', 'Persentase (%)'],
+    ['Memuaskan (Satisfactory)', '|z| <= 2.0', countSat, stats.totalValid > 0 ? ((countSat / stats.totalValid) * 100).toFixed(1) + '%' : '0%'],
+    ['Peringatan (Warning)', '2.0 < |z| <= 3.0', countWarn, stats.totalValid > 0 ? ((countWarn / stats.totalValid) * 100).toFixed(1) + '%' : '0%'],
+    ['Tindakan (Action Required)', '|z| > 3.0', countAct, stats.totalValid > 0 ? ((countAct / stats.totalValid) * 100).toFixed(1) + '%' : '0%'],
+    [''],
+    ['KLASIFIKASI TINGKAT KINERJA ENAM SIGMA'],
+    ['Kategori Sigma', 'Rentang Metrik', 'Interpretasi Klinis'],
+    ['World Class', 'Sigma >= 6.0', 'Kinerja kelas dunia, kesalahan analitik sangat minimal'],
+    ['Excellent', '5.0 <= Sigma < 6.0', 'Kinerja sangat baik'],
+    ['Good', '4.0 <= Sigma < 5.0', 'Kinerja baik, kendali mutu rutin memadai'],
+    ['Marginal', '3.0 <= Sigma < 4.0', 'Kinerja batas minimal, tingkatkan pengawasan'],
+    ['Poor', '2.0 <= Sigma < 3.0', 'Kinerja buruk, evaluasi instrumen dan kalibrasi'],
+    ['Unacceptable', 'Sigma < 2.0', 'Tidak dapat diterima secara klinis, stop pengujian dan investigasi']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s8), 'Klasifikasi Kinerja Lab');
+
+  // Sheet 9: Audit Trail & Metodologi
+  var s9 = [
+    ['AUDIT TRAIL & METODOLOGI ANALISIS PEER GROUP DIDIQC'],
+    ['Waktu Eksekusi Analisis', new Date().toISOString()],
+    ['Dieksekusi Oleh', getActiveUsername() + ' (' + getActiveRole() + ')'],
+    ['Standar Acuan', 'ISO 13528:2022 — Statistical methods for use in proficiency testing by interlaboratory comparison'],
+    ['Algoritma Robust', 'Algorithm A with Iterative Winsorization (Annex C ISO 13528)'],
+    ['Formula Z-Score', 'z = (x_lab - X) / sigma_pt'],
+    ['Formula Skor Relatif', 'z_rel = (x_lab - x*) / s* (Skor Relatif Peer Group)'],
+    ['Formula Sigma Metrik Medis', 'Sigma = (TEa% - |Bias%|) / CV_lab%'],
+    ['Ketidakpastian Nilai Konsensus', 'u(x*) = 1.25 * (s* / sqrt(p*))'],
+    ['Integritas Data', 'Multi-tenant database NeonDB PostgreSQL dengan audit log terenkripsi']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s9), 'Audit Trail & Metodologi');
+
+  var fn = 'PeerGroup_' + cfg.parameter + '_' + cfg.level + '_' + cfg.startDate + '_' + cfg.endDate + '.xlsx';
+  XLSX.writeFile(wb, fn);
+  toast('File Excel 9 Sheet berhasil diunduh: ' + fn, 'success');
+}
+
+// ------------------------------------------------------------
+// CETAK & PDF FORMAL PEER GROUP (SUPERADMIN)
+// ------------------------------------------------------------
+function printPeerGroupReport(){
+  if(!lastPgAnalysis || !lastPgAnalysis.config){
+    toast('Belum ada hasil analisis untuk dicetak', 'warning');
+    return;
+  }
+  var res = lastPgAnalysis;
+  var cfg = res.config;
+  var stats = res.stats;
+  var evals = res.evaluations || [];
+
+  var kopHtml = (typeof buildKopHTML === 'function') ? buildKopHTML(CD.kop, true) : '';
+
+  var printWin = window.open('', '_blank');
+  if(!printWin){
+    toast('Popup blocker aktif, mohon izinkan popup untuk mencetak', 'error');
+    return;
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>Laporan Evaluasi Peer Group PME/PMI</title>' +
+    '<style>' +
+      '@page { size: landscape; margin: 12mm; }' +
+      'body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 15px; }' +
+      '.kop { margin-bottom: 15px; }' +
+      'h2, h3, h4 { margin: 4px 0; text-align: center; }' +
+      'table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; font-size: 10px; }' +
+      'th, td { border: 1px solid #475569; padding: 5px 6px; text-align: left; }' +
+      'th { background: #f1f5f9; font-weight: bold; text-align: center; }' +
+      '.text-center { text-align: center; }' +
+      '.text-right { text-align: right; }' +
+      '.badge-ok { background: #d1fae5; color: #065f46; padding: 2px 5px; border-radius: 3px; font-weight: bold; }' +
+      '.badge-warn { background: #fef3c7; color: #92400e; padding: 2px 5px; border-radius: 3px; font-weight: bold; }' +
+      '.badge-danger { background: #fee2e2; color: #991b1b; padding: 2px 5px; border-radius: 3px; font-weight: bold; }' +
+      '.grid-info { display: table; width: 100%; margin-bottom: 12px; }' +
+      '.grid-cell { display: table-cell; width: 50%; vertical-align: top; }' +
+      '.sign-box { display: table; width: 100%; margin-top: 35px; page-break-inside: avoid; }' +
+      '.sign-col { display: table-cell; width: 50%; text-align: center; }' +
+    '</style></head><body>';
+
+  html += '<div class="kop">' + kopHtml + '</div>';
+  html += '<h2>LAPORAN EVALUASI MUTU PEER GROUP PME / PMI</h2>';
+  html += '<div style="text-align:center;font-size:10px;color:#64748b;margin-bottom:12px">Sesuai Standar ISO 13528:2022 Algorithm A &amp; Evaluasi Sigma Metrik Medis</div>';
+
+  html += '<div class="grid-info">' +
+    '<div class="grid-cell">' +
+      '<strong>Parameter:</strong> ' + escH(cfg.parameter) + ' (' + escH(cfg.level) + ')<br>' +
+      '<strong>Periode:</strong> ' + escH(cfg.startDate) + ' s/d ' + escH(cfg.endDate) + '<br>' +
+      '<strong>Aturan Agregasi:</strong> ' + escH(cfg.aggregationRule) + '<br>' +
+      '<strong>Filter Alat:</strong> ' + escH(cfg.analyzer || 'Semua Alat') +
+    '</div>' +
+    '<div class="grid-cell" style="text-align:right">' +
+      '<strong>Target Acuan (X):</strong> ' + (cfg.assignedValue ? cfg.assignedValue.toFixed(2) : '-') + '<br>' +
+      '<strong>SDPA Acuan:</strong> ' + (cfg.sdpaValue ? cfg.sdpaValue.toFixed(3) : '-') + ' ' + (cfg.isFormalPme ? '(Formal PME)' : '(Skor Relatif)') + '<br>' +
+      '<strong>Robust Mean (x*):</strong> ' + (stats.robust.robustMean ? stats.robust.robustMean.toFixed(2) : '-') + '<br>' +
+      '<strong>Ketidakpastian u(x*):</strong> ' + (stats.robust.uncertainty ? stats.robust.uncertainty.toFixed(4) : '-') +
+    '</div>' +
+  '</div>';
+
+  // Tabel Rekap Evaluasi Peserta
+  html += '<h4>Tabel Evaluasi Z-Score, Skor Relatif &amp; Kinerja Laboratorium Peserta</h4>';
+  html += '<table><thead><tr>' +
+    '<th>No</th><th>Nama Rumah Sakit / Peserta</th><th>Nilai Lab</th><th>Target (X)</th><th>SDPA</th><th>Selisih</th><th>Z-Score Formal</th><th>Skor Relatif</th><th>Evaluasi</th><th>Sigma</th><th>Kategori Sigma</th>' +
+  '</tr></thead><tbody>';
+
+  evals.forEach(function(e, i){
+    var catClass = (e.evalCategory === 'satisfactory') ? 'badge-ok' : (e.evalCategory === 'warning' ? 'badge-warn' : 'badge-danger');
+    var zF = e.zScore !== null ? e.zScore.toFixed(2) : '-';
+    var zR = e.peerRelativeScore !== null ? e.peerRelativeScore.toFixed(2) : '-';
+    var sig = e.sigma !== null ? e.sigma.toFixed(2) : '-';
+
+    html += '<tr>' +
+      '<td class="text-center">' + (i+1) + '</td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong></td>' +
+      '<td class="text-right">' + (e.usedValue ? e.usedValue.toFixed(2) : '-') + '</td>' +
+      '<td class="text-right">' + (cfg.assignedValue ? cfg.assignedValue.toFixed(2) : '-') + '</td>' +
+      '<td class="text-right">' + (cfg.sdpaValue ? cfg.sdpaValue.toFixed(3) : '-') + '</td>' +
+      '<td class="text-right">' + (e.diffTarget ? e.diffTarget.toFixed(2) : '-') + '</td>' +
+      '<td class="text-center"><strong>' + zF + '</strong></td>' +
+      '<td class="text-center">' + zR + '</td>' +
+      '<td class="text-center"><span class="' + catClass + '">' + escH(e.evalCategory || '-') + '</span></td>' +
+      '<td class="text-center">' + sig + '</td>' +
+      '<td class="text-center">' + escH(e.sigmaCategory || '-') + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Tanda Tangan
+  var tglStr = fmtDateIndo ? fmtDateIndo(new Date()) : new Date().toLocaleDateString('id-ID');
+  html += '<div class="sign-box">' +
+    '<div class="sign-col">' +
+      'Mengetahui,<br><strong>Penanggung Jawab Teknis Laboratorium</strong>' +
+      '<br><br><br><br>' +
+      '<strong>( ________________________ )</strong>' +
+    '</div>' +
+    '<div class="sign-col">' +
+      (CD.kop && CD.kop.kota ? CD.kop.kota : 'Jakarta') + ', ' + tglStr + '<br><strong>Koordinator Mutu &amp; PME Antar-Lab</strong>' +
+      '<br><br><br><br>' +
+      '<strong>' + escH(getActiveUsername().toUpperCase()) + '</strong>' +
+    '</div>' +
+  '</div>';
+
+  html += '</body></html>';
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(function(){
+    printWin.print();
+  }, 600);
+}
+
+function pdfPeerGroupReport(){
+  printPeerGroupReport();
+}
+
+// ------------------------------------------------------------
+// MODAL PUBLISH & DISTRIBUSI LAPORAN
+// ------------------------------------------------------------
+function openPublishPeerGroupModal(){
+  if(!lastPgAnalysis || !lastPgAnalysis.config){
+    toast('Belum ada hasil analisis untuk diterbitkan', 'warning');
+    return;
+  }
+  var res = lastPgAnalysis;
+  var cfg = res.config;
+  var evals = res.evaluations || [];
+
+  if(G('mPubTitle')) {
+    G('mPubTitle').value = 'Evaluasi Peer Group PME: ' + cfg.parameter + ' (' + cfg.level + ') - ' + cfg.startDate + ' s/d ' + cfg.endDate;
+  }
+  if(G('mPubParam')) G('mPubParam').textContent = cfg.parameter;
+  if(G('mPubLevel')) G('mPubLevel').textContent = cfg.level;
+  if(G('mPubTarget')) G('mPubTarget').textContent = cfg.assignedValue ? cfg.assignedValue.toFixed(2) : '-';
+  if(G('mPubSdpa')) G('mPubSdpa').textContent = cfg.sdpaValue ? cfg.sdpaValue.toFixed(3) : '-';
+
+  var recipientList = G('mPubRecipientList');
+  if(recipientList){
+    var html = '';
+    evals.forEach(function(e){
+      html += '<label style="display:flex;align-items:center;gap:6px;font-size:.82rem;padding:3px 0;cursor:pointer">' +
+        '<input type="checkbox" class="pub-recipient-cb" value="' + escH(e.hospitalUsername) + '" checked>' +
+        '<span><strong>' + escH(e.hospitalName) + '</strong> (@' + escH(e.hospitalUsername) + ')</span>' +
+      '</label>';
+    });
+    recipientList.innerHTML = html;
+  }
+
+  opM('modalPublishPeerReport');
+}
+
+function submitPublishPeerReport(){
+  var title = G('mPubTitle') ? G('mPubTitle').value.trim() : '';
+  if(!title){
+    toast('Judul laporan wajib diisi', 'warning');
+    return;
+  }
+
+  var cbs = document.querySelectorAll('.pub-recipient-cb:checked');
+  var recipients = [];
+  cbs.forEach(function(c){ recipients.push(c.value); });
+  if(recipients.length === 0){
+    toast('Pilih minimal 1 rumah sakit penerima', 'warning');
+    return;
+  }
+
+  var payload = {
+    title: title,
+    analysisResult: lastPgAnalysis,
+    recipients: recipients
+  };
+
+  sl('Menerbitkan dan mendistribusikan laporan ke rumah sakit...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Gagal menerbitkan laporan', 'error');
+        return;
+      }
+      toast(res.msg, 'success');
+      clM('modalPublishPeerReport');
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error menerbitkan laporan: ' + (err.message || err), 'error');
+    })
+    .saveAndPublishPeerGroup(payload);
+}
+
+// ============================================================
+// MENU USER: LAPORAN ANALISA PEER GROUP (MULTI-TENANT ISOLASI)
+// ============================================================
+function loadPeerReportsPage(){
+  sl('Memuat daftar laporan peer group Anda...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Gagal memuat laporan', 'error');
+        return;
+      }
+      myPeerReportsCache = res.data || [];
+      renderPeerReportsTable(myPeerReportsCache);
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error memuat laporan: ' + (err.message || err), 'error');
+    })
+    .getMyPeerGroupReports();
+}
+
+function renderPeerReportsTable(list){
+  var tb = G('peerReportsTableBody');
+  if(!tb) return;
+  if(list.length === 0){
+    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:18px;color:var(--text-secondary)">Belum ada laporan evaluasi peer group yang diterbitkan untuk akun ini.</td></tr>';
+    return;
+  }
+
+  var html = '';
+  list.forEach(function(r, i){
+    var catBadge = '';
+    if(r.evalCategory === 'satisfactory') catBadge = '<span class="badge badge-success">Memuaskan</span>';
+    else if(r.evalCategory === 'warning') catBadge = '<span class="badge badge-warning">Peringatan</span>';
+    else if(r.evalCategory === 'action') catBadge = '<span class="badge badge-danger">Tindakan</span>';
+    else catBadge = '<span class="badge badge-secondary">-</span>';
+
+    var sigStr = r.sigma !== null ? '<strong>' + r.sigma.toFixed(2) + ' σ</strong>' : '-';
+    var tgl = r.sentDate ? new Date(r.sentDate).toLocaleDateString('id-ID') : '-';
+    var stBadge = r.status === 'read'
+      ? '<span class="badge badge-outline">Sudah Dibuka</span>'
+      : '<span class="badge badge-primary">Baru</span>';
+
+    html += '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td>' + tgl + '</td>' +
+      '<td><strong>' + escH(r.title) + '</strong></td>' +
+      '<td>' + escH(r.parameter) + '</td>' +
+      '<td><span class="badge badge-secondary">' + escH(r.level) + '</span></td>' +
+      '<td>' + escH(r.period) + '</td>' +
+      '<td>' + catBadge + '</td>' +
+      '<td>' + sigStr + '</td>' +
+      '<td>' + stBadge + '</td>' +
+      '<td><button class="btn btn-primary btn-xs" onclick="viewPeerReportDetail(\'' + escH(r.id) + '\')"><i class="fas fa-eye"></i> Buka Laporan</button></td>' +
+    '</tr>';
+  });
+  tb.innerHTML = html;
+}
+
+function viewPeerReportDetail(reportId){
+  sl('Membuka detail laporan evaluasi...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Gagal membuka detail laporan', 'error');
+        return;
+      }
+      currentModalReportDetail = res;
+      renderModalReportDetail(res);
+      opM('modalPeerReportDetail');
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error membuka detail: ' + (err.message || err), 'error');
+    })
+    .getPeerGroupReportDetail(reportId);
+}
+
+function renderModalReportDetail(res){
+  var cfg = res.config;
+  var stats = res.summaryStats;
+  var my = res.myItem;
+  var kop = res.kop;
+
+  if(G('mPeerRptTitle')){
+    G('mPeerRptTitle').textContent = cfg.title;
+  }
+
+  // Kop surat instansi penerima
+  var kopCont = G('mPeerRptKopContainer');
+  if(kopCont && typeof buildKopHTML === 'function'){
+    kopCont.innerHTML = buildKopHTML(kop, true);
+  }
+
+  var cCont = G('mPeerRptContent');
+  if(!cCont) return;
+
+  var zValStr = my && my.zScore !== null
+    ? '<span style="font-size:1.4rem;font-weight:800;color:var(--primary)">' + (my.zScore >= 0 ? '+' : '') + my.zScore.toFixed(2) + '</span>'
+    : (my && my.peerRelativeScore !== null
+      ? '<span style="font-size:1.4rem;font-weight:800;color:#6366f1">' + (my.peerRelativeScore >= 0 ? '+' : '') + my.peerRelativeScore.toFixed(2) + '</span> (Skor Relatif)'
+      : '-');
+
+  var catClass = my && my.evalCategory === 'satisfactory' ? 'badge-success' : (my && my.evalCategory === 'warning' ? 'badge-warning' : 'badge-danger');
+
+  var html = '<div style="background:var(--bg-secondary);padding:14px;border-radius:8px;border:1px solid var(--border);margin-bottom:14px">' +
+    '<h4 style="margin:0 0 10px;color:var(--primary)"><i class="fas fa-file-contract"></i> Ringkasan Evaluasi Mutu Antar-Laboratorium</h4>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;font-size:.85rem">' +
+      '<div><strong>Penerima:</strong> ' + escH(res.delivery.recipientName) + '</div>' +
+      '<div><strong>Parameter:</strong> ' + escH(cfg.parameter) + ' (' + escH(cfg.level) + ')</div>' +
+      '<div><strong>Periode:</strong> ' + escH(cfg.startDate) + ' s/d ' + escH(cfg.endDate) + '</div>' +
+      '<div><strong>Target Acuan (X):</strong> ' + (cfg.assignedValue ? cfg.assignedValue.toFixed(2) : '-') + '</div>' +
+      '<div><strong>SDPA Evaluasi:</strong> ' + (cfg.sdpaValue ? cfg.sdpaValue.toFixed(3) : '-') + '</div>' +
+      '<div><strong>Robust Mean (x*):</strong> ' + (stats && stats.robustMean ? stats.robustMean.toFixed(2) : '-') + '</div>' +
+      '<div><strong>Total Peserta Valid:</strong> ' + (stats ? stats.totalValid : 0) + ' Lab</div>' +
+      '<div><strong>Ketidakpastian u(x*):</strong> ' + (stats && stats.uncertainty ? stats.uncertainty.toFixed(4) : '-') + '</div>' +
+    '</div>' +
+  '</div>';
+
+  if(my){
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px">' +
+      '<div class="card" style="padding:12px;margin:0;border-left:4px solid var(--primary)">' +
+        '<div style="font-size:.78rem;color:var(--text-secondary);font-weight:600">HASIL QC LABORATORIUM ANDA</div>' +
+        '<div style="font-size:1.4rem;font-weight:800;color:var(--primary);margin-top:4px">' + (my.usedValue ? my.usedValue.toFixed(2) : '-') + ' ' + escH(my.unit || '') + '</div>' +
+        '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px">Selisih: ' + (my.diffTarget ? (my.diffTarget >= 0 ? '+' : '') + my.diffTarget.toFixed(2) : '-') + ' dari target</div>' +
+      '</div>' +
+      '<div class="card" style="padding:12px;margin:0;border-left:4px solid #10b981">' +
+        '<div style="font-size:.78rem;color:var(--text-secondary);font-weight:600">SKOR KINERJA (Z-SCORE)</div>' +
+        '<div style="margin-top:4px">' + zValStr + '</div>' +
+        '<div style="margin-top:2px"><span class="badge ' + catClass + '">' + escH(my.evalCategory || '-') + '</span></div>' +
+      '</div>' +
+      '<div class="card" style="padding:12px;margin:0;border-left:4px solid #f59e0b">' +
+        '<div style="font-size:.78rem;color:var(--text-secondary);font-weight:600">SIGMA METRIK MEDIS</div>' +
+        '<div style="font-size:1.4rem;font-weight:800;color:#f59e0b;margin-top:4px">' + (my.sigma ? my.sigma.toFixed(2) + ' σ' : '-') + '</div>' +
+        '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px">' + escH(my.sigmaCategory || 'Data Belum Lengkap') + '</div>' +
+      '</div>' +
+    '</div>';
+
+    html += '<div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px">' +
+      '<h5 style="margin:0 0 6px;color:var(--primary)"><i class="fas fa-stethoscope"></i> Rekomendasi Kendali Mutu Klinis &amp; Analitik</h5>' +
+      '<p style="margin:0;font-size:.85rem;line-height:1.5">' + escH(my.recommendation || 'Lanjutkan pemantauan mutu harian secara konsisten.') + '</p>' +
+    '</div>';
+  }
+
+  // Jika superadmin melihat detail laporan ini, tampilkan tabel seluruh peserta
+  if(res.allItems && res.allItems.length > 1){
+    html += '<h4 style="margin:16px 0 8px;font-size:.9rem"><i class="fas fa-users"></i> Perbandingan Seluruh Peserta Peer Group</h4>' +
+      '<div class="table-wrap"><table><thead><tr>' +
+        '<th>No</th><th>Rumah Sakit</th><th>Nilai QC</th><th>Z-Score</th><th>Skor Relatif</th><th>Evaluasi</th><th>Sigma</th>' +
+      '</tr></thead><tbody>';
+    res.allItems.forEach(function(it, idx){
+      html += '<tr>' +
+        '<td>' + (idx+1) + '</td>' +
+        '<td><strong>' + escH(it.hospitalName) + '</strong></td>' +
+        '<td>' + (it.usedValue ? it.usedValue.toFixed(2) : '-') + '</td>' +
+        '<td>' + (it.zScore !== null ? it.zScore.toFixed(2) : '-') + '</td>' +
+        '<td>' + (it.peerRelativeScore !== null ? it.peerRelativeScore.toFixed(2) : '-') + '</td>' +
+        '<td>' + escH(it.evalCategory || '-') + '</td>' +
+        '<td>' + (it.sigma ? it.sigma.toFixed(2) + ' σ' : '-') + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  cCont.innerHTML = html;
+}
+
+function printModalPeerReport(){
+  if(!currentModalReportDetail){
+    toast('Detail laporan belum siap', 'warning');
+    return;
+  }
+  var res = currentModalReportDetail;
+  var cfg = res.config;
+  var stats = res.summaryStats;
+  var my = res.myItem;
+  var kop = res.kop;
+
+  var kopHtml = (typeof buildKopHTML === 'function') ? buildKopHTML(kop, true) : '';
+
+  var printWin = window.open('', '_blank');
+  if(!printWin){
+    toast('Popup blocker aktif, mohon izinkan popup', 'error');
+    return;
+  }
+
+  var zStr = (my && my.zScore !== null) ? my.zScore.toFixed(2) : (my && my.peerRelativeScore !== null ? my.peerRelativeScore.toFixed(2) + ' (Skor Relatif)' : '-');
+  var sigStr = (my && my.sigma !== null) ? my.sigma.toFixed(2) + ' σ (' + my.sigmaCategory + ')' : '-';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>Laporan Individual Evaluasi Peer Group</title>' +
+    '<style>' +
+      '@page { size: portrait; margin: 15mm; }' +
+      'body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 10px; }' +
+      '.kop { margin-bottom: 15px; }' +
+      'h2, h3, h4 { margin: 4px 0; text-align: center; }' +
+      'table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; font-size: 11px; }' +
+      'th, td { border: 1px solid #475569; padding: 6px 8px; text-align: left; }' +
+      'th { background: #f1f5f9; font-weight: bold; }' +
+      '.sign-box { display: table; width: 100%; margin-top: 40px; page-break-inside: avoid; }' +
+      '.sign-col { display: table-cell; width: 50%; text-align: center; }' +
+    '</style></head><body>';
+
+  html += '<div class="kop">' + kopHtml + '</div>';
+  html += '<h2>LAPORAN EVALUASI MUTU PEER GROUP (PME / PMI)</h2>';
+  html += '<div style="text-align:center;font-size:10px;color:#64748b;margin-bottom:14px">Dokumen Resmi Hasil Evaluasi Mutu Antar-Laboratorium Sesuai ISO 13528:2022</div>';
+
+  html += '<table>' +
+    '<tr><th colspan="2">IDENTITAS EVALUASI PEER GROUP</th></tr>' +
+    '<tr><td style="width:35%">Fasyankes / Laboratorium Peserta</td><td><strong>' + escH(res.delivery.recipientName) + '</strong> (@' + escH(res.delivery.recipientUsername) + ')</td></tr>' +
+    '<tr><td>Parameter Pemeriksaan &amp; Level</td><td><strong>' + escH(cfg.parameter) + ' (' + escH(cfg.level) + ')</strong></td></tr>' +
+    '<tr><td>Periode Uji Mutu</td><td>' + escH(cfg.startDate) + ' s/d ' + escH(cfg.endDate) + '</td></tr>' +
+    '<tr><td>Tanggal Diterbitkan</td><td>' + (res.delivery.sentDate ? new Date(res.delivery.sentDate).toLocaleDateString('id-ID') : '-') + '</td></tr>' +
+    '<tr><th colspan="2">HASIL EVALUASI LABORATORIUM PESERTA</th></tr>' +
+    '<tr><td>Hasil Uji QC Lab yang Digunakan</td><td><strong>' + (my && my.usedValue ? my.usedValue.toFixed(2) : '-') + ' ' + escH((my && my.unit) || '') + '</strong></td></tr>' +
+    '<tr><td>Nilai Target Acuan (Assigned Value, X)</td><td>' + (cfg.assignedValue ? cfg.assignedValue.toFixed(2) : '-') + ' (' + escH(cfg.assignedValueSource) + ')</td></tr>' +
+    '<tr><td>SDPA Acuan Evaluasi</td><td>' + (cfg.sdpaValue ? cfg.sdpaValue.toFixed(3) : '-') + ' (' + escH(cfg.sdpaSource) + ')</td></tr>' +
+    '<tr><td>Selisih Nilai (Lab - Target)</td><td>' + (my && my.diffTarget ? (my.diffTarget >= 0 ? '+' : '') + my.diffTarget.toFixed(2) : '-') + '</td></tr>' +
+    '<tr><td>Skor Evaluasi (Z-Score / Skor Relatif)</td><td><strong>' + zStr + '</strong></td></tr>' +
+    '<tr><td>Kategori Kinerja</td><td><strong>' + escH((my && my.evalCategory) || '-') + '</strong></td></tr>' +
+    '<tr><td>Bias Relatif (%)</td><td>' + (my && my.biasPct ? my.biasPct.toFixed(2) + '%' : '-') + '</td></tr>' +
+    '<tr><td>Imprecision Aktual Lab (CV%)</td><td>' + (my && my.cvLab ? my.cvLab.toFixed(2) + '%' : '-') + '</td></tr>' +
+    '<tr><td>Total Allowable Error (TEa%)</td><td>' + (my && my.tea ? my.tea.toFixed(1) + '%' : '-') + '</td></tr>' +
+    '<tr><td>Pencapaian Sigma Metrik</td><td><strong>' + sigStr + '</strong></td></tr>' +
+    '<tr><th colspan="2">RINGKASAN STATISTIK KONSENSUS PEER GROUP (ISO 13528:2022)</th></tr>' +
+    '<tr><td>Jumlah Lab Peserta Valid (p*)</td><td>' + (stats ? stats.totalValid : 0) + ' Laboratorium</td></tr>' +
+    '<tr><td>Robust Mean Konsensus (x*)</td><td>' + (stats && stats.robustMean ? stats.robustMean.toFixed(2) : '-') + '</td></tr>' +
+    '<tr><td>Robust SD Kelompok (s*)</td><td>' + (stats && stats.robustSd ? stats.robustSd.toFixed(3) : '-') + '</td></tr>' +
+    '<tr><td>Ketidakpastian Standar Konsensus u(x*)</td><td>' + (stats && stats.uncertainty ? stats.uncertainty.toFixed(4) : '-') + '</td></tr>' +
+    '<tr><th colspan="2">REKOMENDASI PENGENDALIAN MUTU</th></tr>' +
+    '<tr><td colspan="2" style="line-height:1.5">' + escH((my && my.recommendation) || 'Pertahankan ketelitian dan akurasi pengujian.') + '</td></tr>' +
+  '</table>';
+
+  var tglStr = fmtDateIndo ? fmtDateIndo(new Date()) : new Date().toLocaleDateString('id-ID');
+  html += '<div class="sign-box">' +
+    '<div class="sign-col">' +
+      'Mengetahui,<br><strong>Penanggung Jawab Laboratorium</strong>' +
+      '<br><br><br><br>' +
+      '<strong>( ________________________ )</strong>' +
+    '</div>' +
+    '<div class="sign-col">' +
+      (kop.kota || 'Jakarta') + ', ' + tglStr + '<br><strong>Penyelenggara Evaluasi Mutu</strong>' +
+      '<br><br><br><br>' +
+      '<strong>' + escH((CD.kop && CD.kop.namaRS) || 'DIDIQC PEER GROUP') + '</strong>' +
+    '</div>' +
+  '</div>';
+
+  html += '</body></html>';
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(function(){
+    printWin.print();
+  }, 600);
+}
+
+function pdfModalPeerReport(){
+  printModalPeerReport();
+}
 </script>
 <!-- EXPORT PANEL MODAL v10.0 -->
 <div class="export-panel-overlay" id="exportPanelOverlay"
