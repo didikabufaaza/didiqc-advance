@@ -115,12 +115,12 @@ export async function getPeerGroupFilterOptions(args: any[], session: SessionDat
   const distinctLotsQC = await db.lotQC.findMany({
     distinct: ["noLot"],
     select: { noLot: true },
-    where: { noLot: { not: null } },
+    where: { noLot: { not: "" } },
   });
   const distinctLotsInput = await db.inputQC.findMany({
     distinct: ["noLot"],
     select: { noLot: true },
-    where: { noLot: { not: null } },
+    where: { noLot: { not: "" } },
   });
   const lotSet = new Set<string>();
   distinctLotsQC.forEach((l) => { if (l.noLot && l.noLot.trim()) lotSet.add(l.noLot.trim()); });
@@ -182,21 +182,21 @@ export async function getPeerGroupFilterDetails(args: any[], session: SessionDat
 
   // Cari metode yang terkait dengan lot-lot ini
   const lotIds = distinctLots.map((l) => l.lotID).filter(Boolean) as string[];
-  const lotsWithMethod = await db.lotQC.findMany({
-    where: {
-      OR: [
-        { id: { in: lotIds } },
-        { noLot: { in: lotNos } },
-      ],
-    },
-    select: { methode: true },
-  });
   const methodSet = new Set<string>();
-  lotsWithMethod.forEach((l) => {
-    if (l.methode && l.methode.trim() && l.methode.trim() !== "-") {
-      methodSet.add(l.methode.trim());
-    }
-  });
+  if (lotIds.length > 0 || lotNos.length > 0) {
+    const orCond: any[] = [];
+    if (lotIds.length > 0) orCond.push({ id: { in: lotIds } });
+    if (lotNos.length > 0) orCond.push({ noLot: { in: lotNos } });
+    const lotsWithMethod = await db.lotQC.findMany({
+      where: { OR: orCond },
+      select: { methode: true },
+    });
+    lotsWithMethod.forEach((l) => {
+      if (l.methode && l.methode.trim() && l.methode.trim() !== "-") {
+        methodSet.add(l.methode.trim());
+      }
+    });
+  }
 
   return {
     ok: true,
