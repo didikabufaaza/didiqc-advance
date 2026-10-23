@@ -89,11 +89,124 @@ export async function getPeerGroupFilterOptions(args: any[], session: SessionDat
   });
   const analyzers = distinctAlat.map((a) => a.namaAlat!).filter(Boolean).sort();
 
+  // Ambil metode unik dari lotQC dan masterMetode
+  const distinctMethods = await db.lotQC.findMany({
+    distinct: ["methode"],
+    select: { methode: true },
+    where: { methode: { not: null } },
+  });
+  const masterMethods = await db.masterMetode.findMany({
+    select: { namaMetode: true },
+  });
+  const methodSet = new Set<string>();
+  distinctMethods.forEach((m) => {
+    if (m.methode && m.methode.trim() && m.methode.trim() !== "-") {
+      methodSet.add(m.methode.trim());
+    }
+  });
+  masterMethods.forEach((m) => {
+    if (m.namaMetode && m.namaMetode.trim()) {
+      methodSet.add(m.namaMetode.trim());
+    }
+  });
+  const methods = Array.from(methodSet).sort();
+
+  // Ambil lot unik dari lotQC dan inputQC
+  const distinctLotsQC = await db.lotQC.findMany({
+    distinct: ["noLot"],
+    select: { noLot: true },
+    where: { noLot: { not: null } },
+  });
+  const distinctLotsInput = await db.inputQC.findMany({
+    distinct: ["noLot"],
+    select: { noLot: true },
+    where: { noLot: { not: null } },
+  });
+  const lotSet = new Set<string>();
+  distinctLotsQC.forEach((l) => { if (l.noLot && l.noLot.trim()) lotSet.add(l.noLot.trim()); });
+  distinctLotsInput.forEach((l) => { if (l.noLot && l.noLot.trim()) lotSet.add(l.noLot.trim()); });
+  const lots = Array.from(lotSet).sort();
+
   return {
     ok: true,
     hospitals: hospitalOptions,
     parameters,
     analyzers,
+    methods,
+    lots,
+  };
+}
+
+// ------------------------------------------------------------
+// 1b. Ambil Detail Filter Berdasarkan Parameter Tertentu (Live Helper)
+// ------------------------------------------------------------
+export async function getPeerGroupFilterDetails(args: any[], session: SessionData | null) {
+  requireSuperadmin(session);
+  const param = String(args[0] || "").trim();
+  const selectedHospitals: string[] = Array.isArray(args[1]) ? args[1] : [];
+
+  if (!param) {
+    return { ok: false, msg: "Parameter wajib diisi" };
+  }
+
+  const whereQC: any = {
+    parameter: { equals: param, mode: "insensitive" },
+  };
+  if (selectedHospitals.length > 0) {
+    whereQC.ownerUsername = { in: selectedHospitals };
+  }
+
+  // Cari rentang tanggal aktual
+  const dateAgg = await db.inputQC.aggregate({
+    where: whereQC,
+    _min: { tanggal: true },
+    _max: { tanggal: true },
+    _count: { id: true },
+  });
+
+  // Cari alat yang dipakai untuk parameter ini
+  const distinctAlat = await db.inputQC.findMany({
+    where: whereQC,
+    distinct: ["namaAlat"],
+    select: { namaAlat: true },
+  });
+  const analyzers = distinctAlat.map((a) => a.namaAlat!).filter(Boolean).sort();
+
+  // Cari lot yang dipakai untuk parameter ini
+  const distinctLots = await db.inputQC.findMany({
+    where: whereQC,
+    distinct: ["noLot"],
+    select: { noLot: true, lotID: true },
+  });
+  const lotNos = Array.from(new Set(distinctLots.map((l) => l.noLot).filter(Boolean) as string[])).sort();
+
+  // Cari metode yang terkait dengan lot-lot ini
+  const lotIds = distinctLots.map((l) => l.lotID).filter(Boolean) as string[];
+  const lotsWithMethod = await db.lotQC.findMany({
+    where: {
+      OR: [
+        { id: { in: lotIds } },
+        { noLot: { in: lotNos } },
+      ],
+    },
+    select: { methode: true },
+  });
+  const methodSet = new Set<string>();
+  lotsWithMethod.forEach((l) => {
+    if (l.methode && l.methode.trim() && l.methode.trim() !== "-") {
+      methodSet.add(l.methode.trim());
+    }
+  });
+
+  return {
+    ok: true,
+    parameter: param,
+    count: dateAgg._count.id,
+    minDate: dateAgg._min.tanggal || null,
+    maxDate: dateAgg._max.tanggal || null,
+    analyzers,
+    lots: lotNos,
+    methods: Array.from(methodSet).sort(),
   };
 }
 
@@ -135,15 +248,37 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
     tanggal: { gte: startDate, lte: endDate },
   };
 
-  // Filter opsional: alat & lot jika dispesifikasikan
-  if (payload.analyzer) {
-    whereQC.namaAlat = payload.analyzer;
+  // Filter opsional: alat, metode & lot jika dispesifikasikan
+  const analyzerFilter = payload.analyzer ? String(payload.analyzer).trim() : "";
+  const methodFilter = payload.method ? String(payload.method).trim() : "";
+  const lotFilter = payload.controlLot ? String(payload.controlLot).trim() : "";
+
+  if (analyzerFilter) {
+    whereQC.namaAlat = { equals: analyzerFilter, mode: "insensitive" };
   }
-  if (payload.controlLot) {
-    whereQC.noLot = payload.controlLot;
+  if (lotFilter) {
+    whereQC.noLot = { equals: lotFilter, mode: "insensitive" };
   }
   if (payload.validationOnly) {
     whereQC.validated = true;
+  }
+
+  // Jika filter metode dipilih, cari lot-lot yang memiliki metode tersebut
+  if (methodFilter) {
+    const matchingLots = await db.lotQC.findMany({
+      where: {
+        ownerUsername: { in: selectedHospitals },
+        methode: { equals: methodFilter, mode: "insensitive" },
+      },
+      select: { id: true, noLot: true },
+    });
+    const lotIdsWithMethod = matchingLots.map((l) => l.id);
+    const lotNosWithMethod = matchingLots.map((l) => l.noLot).filter(Boolean) as string[];
+
+    whereQC.OR = [
+      { lotID: { in: lotIdsWithMethod } },
+      { noLot: { in: lotNosWithMethod } },
+    ];
   }
 
   // Ambil seluruh data QC yang cocok
@@ -297,10 +432,17 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
     }
 
     // Ambil metadata alat, metode, satuan, dan lot
-    const lot = chosenRow ? lotMap.get(chosenRow.lotID) : null;
+    let lot = chosenRow ? lotMap.get(chosenRow.lotID) : null;
+    if (!lot && chosenRow) {
+      lot = lots.find(
+        (l) =>
+          l.ownerUsername === username &&
+          (l.id === chosenRow.lotID || (chosenRow.noLot && l.noLot?.toLowerCase() === chosenRow.noLot?.toLowerCase()))
+      ) || null;
+    }
     const unit = lot?.satuan || null;
     const analyzer = chosenRow?.namaAlat || lot?.namaAlat || null;
-    const method = lot?.methode || null;
+    const method = (lot?.methode && lot.methode !== "-") ? lot.methode : null;
     const controlLot = chosenRow?.noLot || lot?.noLot || null;
     const tea = lot?.tea || (masterTea ? parseNumSafe(masterTea.nilaiTEa) : null);
 
@@ -396,6 +538,117 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
     robustSd: robustStats.robustSd,
   });
 
+  // 5. Hitung Multi-Tier Benchmark Grouping (Model Laporan Standar Uji PME)
+  // Tier 1: Seluruh Peserta
+  const validEvaluations = evaluations.filter((e) => e.validationStatus === "valid" && e.usedValue !== null);
+  const tierAllN = validEvaluations.length;
+
+  // Tier 2: Kelompok Metode
+  const methodGroups = new Map<string, number[]>();
+  validEvaluations.forEach((e) => {
+    if (e.method && e.usedValue !== null) {
+      const key = e.method.trim().toLowerCase();
+      const list = methodGroups.get(key) || [];
+      list.push(e.usedValue);
+      methodGroups.set(key, list);
+    }
+  });
+  const methodStatsMap = new Map<string, { n: number; target: number | null; sdpa: number | null }>();
+  methodGroups.forEach((vals, key) => {
+    if (vals.length >= 6) {
+      const rob = computeAlgorithmA(vals);
+      methodStatsMap.set(key, {
+        n: vals.length,
+        target: rob.robustMean !== null ? Math.round(rob.robustMean * 100) / 100 : null,
+        sdpa: rob.robustSd !== null ? Math.round(rob.robustSd * 100) / 100 : null,
+      });
+    } else {
+      methodStatsMap.set(key, { n: vals.length, target: null, sdpa: null });
+    }
+  });
+
+  // Tier 3: Kelompok Alat
+  const analyzerGroups = new Map<string, number[]>();
+  validEvaluations.forEach((e) => {
+    if (e.analyzer && e.usedValue !== null) {
+      const key = e.analyzer.trim().toLowerCase();
+      const list = analyzerGroups.get(key) || [];
+      list.push(e.usedValue);
+      analyzerGroups.set(key, list);
+    }
+  });
+  const analyzerStatsMap = new Map<string, { n: number; target: number | null; sdpa: number | null }>();
+  analyzerGroups.forEach((vals, key) => {
+    if (vals.length >= 6) {
+      const rob = computeAlgorithmA(vals);
+      analyzerStatsMap.set(key, {
+        n: vals.length,
+        target: rob.robustMean !== null ? Math.round(rob.robustMean * 100) / 100 : null,
+        sdpa: rob.robustSd !== null ? Math.round(rob.robustSd * 100) / 100 : null,
+      });
+    } else {
+      analyzerStatsMap.set(key, { n: vals.length, target: null, sdpa: null });
+    }
+  });
+
+  // Pasang Tiers ke setiap evaluasi peserta
+  evaluations.forEach((item) => {
+    const zAll = item.zScore !== null ? item.zScore : item.peerRelativeScore;
+    const katAll = zAll !== null ? (Math.abs(zAll) <= 2 ? "OK" : Math.abs(zAll) <= 3 ? "Peringatan" : "Tindakan") : "-";
+    const ketAll = zAll !== null ? (Math.abs(zAll) <= 2 ? "Memuaskan" : Math.abs(zAll) <= 3 ? "Meragukan" : "Tidak Memuaskan") : "Tidak dianalisa";
+
+    // Kelompok Metode
+    const mKey = item.method ? item.method.trim().toLowerCase() : "";
+    const mStat = methodStatsMap.get(mKey);
+    let mZ: number | null = null;
+    let mKat = "-";
+    let mKet = "Tidak dianalisa";
+    if (mStat && mStat.n >= 6 && mStat.target !== null && mStat.sdpa !== null && mStat.sdpa > 0 && item.usedValue !== null) {
+      mZ = Math.round(((item.usedValue - mStat.target) / mStat.sdpa) * 100) / 100;
+      mKat = Math.abs(mZ) <= 2 ? "OK" : Math.abs(mZ) <= 3 ? "Peringatan" : "Tindakan";
+      mKet = Math.abs(mZ) <= 2 ? "Memuaskan" : Math.abs(mZ) <= 3 ? "Meragukan" : "Tidak Memuaskan";
+    }
+
+    // Kelompok Alat
+    const aKey = item.analyzer ? item.analyzer.trim().toLowerCase() : "";
+    const aStat = analyzerStatsMap.get(aKey);
+    let aZ: number | null = null;
+    let aKat = "-";
+    let aKet = "Tidak dianalisa";
+    if (aStat && aStat.n >= 6 && aStat.target !== null && aStat.sdpa !== null && aStat.sdpa > 0 && item.usedValue !== null) {
+      aZ = Math.round(((item.usedValue - aStat.target) / aStat.sdpa) * 100) / 100;
+      aKat = Math.abs(aZ) <= 2 ? "OK" : Math.abs(aZ) <= 3 ? "Peringatan" : "Tindakan";
+      aKet = Math.abs(aZ) <= 2 ? "Memuaskan" : Math.abs(aZ) <= 3 ? "Meragukan" : "Tidak Memuaskan";
+    }
+
+    (item as any).tiers = {
+      all: {
+        n: tierAllN,
+        target: targetVal !== null ? Math.round(targetVal * 100) / 100 : null,
+        sdpa: sdpaVal !== null ? Math.round(sdpaVal * 100) / 100 : null,
+        zScore: zAll !== null ? Math.round(zAll * 100) / 100 : null,
+        kategori: katAll,
+        keterangan: ketAll,
+      },
+      method: {
+        n: mStat ? mStat.n : (item.method ? 1 : 0),
+        target: mStat?.target || null,
+        sdpa: mStat?.sdpa || null,
+        zScore: mZ,
+        kategori: mKat,
+        keterangan: mKet,
+      },
+      analyzer: {
+        n: aStat ? aStat.n : (item.analyzer ? 1 : 0),
+        target: aStat?.target || null,
+        sdpa: aStat?.sdpa || null,
+        zScore: aZ,
+        kategori: aKat,
+        keterangan: aKet,
+      },
+    };
+  });
+
   return {
     ok: true,
     config: {
@@ -405,6 +658,9 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
       endDate,
       aggregationRule,
       singleDate,
+      analyzer: analyzerFilter || null,
+      method: methodFilter || null,
+      controlLot: lotFilter || null,
       targetType,
       assignedValue: targetVal,
       assignedValueSource: targetSourceStr,
@@ -707,6 +963,15 @@ export async function getPeerGroupReportDetail(args: any[], session: SessionData
     kopObj[k.key] = k.value || "";
   });
 
+  // Ambil kop surat instansi penyelenggara (admin / sentBy)
+  const adminKop = await db.kopSurat.findMany({
+    where: { ownerUsername: delivery.sentBy || "admin" },
+  });
+  const penyelenggaraKop: Record<string, string> = {};
+  adminKop.forEach((k) => {
+    penyelenggaraKop[k.key] = k.value || "";
+  });
+
   return {
     ok: true,
     delivery: {
@@ -722,5 +987,6 @@ export async function getPeerGroupReportDetail(args: any[], session: SessionData
     myItem,
     allItems,
     kop: kopObj,
+    penyelenggaraKop,
   };
 }

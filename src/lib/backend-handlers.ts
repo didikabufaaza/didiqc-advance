@@ -313,6 +313,7 @@ export const handlers: Record<string, HandlerFn> = {
 
   // ===== Peer Group PME/PMI (ISO 13528:2022) =====
   getPeerGroupFilterOptions: peerGroup.getPeerGroupFilterOptions,
+  getPeerGroupFilterDetails: peerGroup.getPeerGroupFilterDetails,
   runPeerGroupAnalysis: peerGroup.runPeerGroupAnalysis,
   saveAndPublishPeerGroup: peerGroup.saveAndPublishPeerGroup,
   getMyPeerGroupReports: peerGroup.getMyPeerGroupReports,
