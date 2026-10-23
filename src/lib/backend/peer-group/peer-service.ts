@@ -22,6 +22,55 @@ import {
 } from "./stats-engine";
 
 // ------------------------------------------------------------
+// Helper: Normalisasi Sinonim / Alias Nama Parameter Lab Klinik
+// ------------------------------------------------------------
+export function getParameterAliases(param: string): string[] {
+  if (!param) return [];
+  const clean = param.trim();
+  const upper = clean.toUpperCase();
+
+  const synonymGroups: string[][] = [
+    ["CREATININ", "KREATININ", "CREATININE"],
+    ["KOLESTEROL TOTAL", "KHOLESTEROL TOTAL", "CHOLESTEROL TOTAL", "CHOL TOTAL", "KOLESTEROL"],
+    ["WBC", "WBC-C", "LEUKOSIT", "WHITE BLOOD CELL"],
+    ["CALSIUM", "CALSIUM ION", "KALSIUM", "KALSIUM ION", "CALCIUM"],
+    ["GLUKOSA", "GLUCOSE", "GULA DARAH"],
+    ["ASAM URAT", "URIC ACID"],
+    ["TRIGLISERID", "TRIGLISERIDA", "TRIGLYCERIDE"],
+    ["HEMOGLOBIN", "HB"],
+    ["TROMBOSIT", "PLATELET", "PLT"],
+    ["HEMATOKRIT", "HT", "HCT"],
+    ["BILIRUBIN TOTAL", "BIL TOTAL"],
+    ["BILIRUBIN DIREK", "BIL DIREK", "BILIRUBIN DIRECT"],
+    ["PROTEIN TOTAL", "TOTAL PROTEIN"],
+    ["HBA1C", "HB A1C"],
+    ["NATRIUM ION", "NATRIUM", "SODIUM"],
+    ["KALIUM ION", "KALIUM", "POTASSIUM"],
+    ["KLORIDA ION", "KLORIDA", "CHLORIDE"],
+    ["ALP(ALKALIN PHOSPATASE)", "ALP", "ALKALIN PHOSFATASE", "ALKALINE PHOSPHATASE"],
+    ["GGT (GAMMA GT)", "GGT", "GAMMA GT"],
+    ["CK-MB", "CKMB"],
+    ["CK-NAC", "CKNAC"],
+    ["SGOT", "AST"],
+    ["SGPT", "ALT"],
+    ["UREUM", "UREA", "BUN"],
+    ["ALBUMIN", "ALB"],
+    ["HDL", "HDL KOLESTEROL", "HDL CHOLESTEROL"],
+    ["LDL", "LDL KOLESTEROL", "LDL CHOLESTEROL"],
+    ["RBC", "ERITROSIT", "ERYTHROCYTE"]
+  ];
+
+  for (const group of synonymGroups) {
+    if (group.some((syn) => syn.toUpperCase() === upper)) {
+      const set = new Set<string>([clean, ...group]);
+      return Array.from(set);
+    }
+  }
+
+  return [clean];
+}
+
+// ------------------------------------------------------------
 // Helper: Verifikasi Hak Akses Superadmin
 // ------------------------------------------------------------
 function requireSuperadmin(session: SessionData | null) {
@@ -149,8 +198,9 @@ export async function getPeerGroupFilterDetails(args: any[], session: SessionDat
     return { ok: false, msg: "Parameter wajib diisi" };
   }
 
+  const paramAliases = getParameterAliases(param);
   const whereQC: any = {
-    parameter: { equals: param, mode: "insensitive" },
+    parameter: { in: paramAliases, mode: "insensitive" },
   };
   if (selectedHospitals.length > 0) {
     whereQC.ownerUsername = { in: selectedHospitals };
@@ -241,9 +291,11 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
     return { ok: false, msg: "Minimal 1 rumah sakit/laboratorium peserta harus dipilih" };
   }
 
+  const paramAliases = getParameterAliases(parameter);
+
   // Build query filter untuk inputqc
   const whereQC: any = {
-    parameter: { equals: parameter, mode: "insensitive" },
+    parameter: { in: paramAliases, mode: "insensitive" },
     ownerUsername: { in: selectedHospitals },
     tanggal: { gte: startDate, lte: endDate },
   };
@@ -322,7 +374,7 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
 
   // Ambil master TEa rujukan jika ada
   const masterTea = await db.daftarTEa.findFirst({
-    where: { parameter: { equals: parameter, mode: "insensitive" } },
+    where: { parameter: { in: paramAliases, mode: "insensitive" } },
   });
 
   // Kelompokkan hasil QC per rumah sakit
@@ -336,7 +388,8 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
 
   // Proses agregasi per peserta sesuai aturan yang dipilih
   const participantDataList: any[] = [];
-  const levelKey = level === "L3" ? "level3" : level === "L2" ? "level2" : "level1";
+  const isAllLevel = level === "ALL" || level === "SEMUA";
+  const levelsToEval = isAllLevel ? ["L1", "L2", "L3"] : [level];
 
   for (const username of selectedHospitals) {
     const rows = hospitalQCs.get(username) || [];
@@ -346,6 +399,7 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
       participantDataList.push({
         hospitalUsername: username,
         hospitalName,
+        level: isAllLevel ? "ALL" : level,
         usedValue: null,
         originalValue: null,
         sourceCount: 0,
@@ -362,22 +416,100 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
       continue;
     }
 
-    // Ambil baris yang memiliki nilai pada level yang diminta
-    const validLevelRows = rows.filter((r) => {
-      const v = parseNumSafe(r[levelKey]);
-      return v !== null && v !== 0;
-    });
+    let addedAnyLevel = false;
 
-    if (validLevelRows.length === 0) {
+    for (const curLvl of levelsToEval) {
+      const curLevelKey = curLvl === "L3" ? "level3" : curLvl === "L2" ? "level2" : "level1";
+      const validLevelRows = rows.filter((r) => {
+        const v = parseNumSafe(r[curLevelKey]);
+        return v !== null && v !== 0;
+      });
+
+      if (validLevelRows.length === 0) continue;
+
+      let chosenRow: any = null;
+      let usedVal: number | null = null;
+      let dateStr: string | null = null;
+
+      if (aggregationRule === "single_date") {
+        const targetDate = singleDate || startDate;
+        const onDateRows = validLevelRows.filter((r) => r.tanggal === targetDate);
+        if (onDateRows.length > 0) {
+          chosenRow = onDateRows[onDateRows.length - 1];
+          const sum = onDateRows.reduce((a, c) => a + parseNumSafe(c[curLevelKey])!, 0);
+          usedVal = sum / onDateRows.length;
+          dateStr = targetDate;
+        } else {
+          continue;
+        }
+      } else if (aggregationRule === "average") {
+        chosenRow = validLevelRows[validLevelRows.length - 1];
+        const sum = validLevelRows.reduce((a, c) => a + parseNumSafe(c[curLevelKey])!, 0);
+        usedVal = sum / validLevelRows.length;
+        dateStr = `${startDate} s/d ${endDate}`;
+      } else {
+        // latest
+        chosenRow = validLevelRows[validLevelRows.length - 1];
+        usedVal = parseNumSafe(chosenRow[curLevelKey]);
+        dateStr = chosenRow.tanggal;
+      }
+
+      // Ambil metadata alat, metode, satuan, dan lot
+      let lot = chosenRow ? lotMap.get(chosenRow.lotID) : null;
+      if (!lot && chosenRow) {
+        lot = lots.find(
+          (l) =>
+            l.ownerUsername === username &&
+            (l.id === chosenRow.lotID || (chosenRow.noLot && l.noLot?.toLowerCase() === chosenRow.noLot?.toLowerCase()))
+        ) || null;
+      }
+      const unit = lot?.satuan || null;
+      const analyzer = chosenRow?.namaAlat || lot?.namaAlat || null;
+      const method = (lot?.methode && lot.methode !== "-") ? lot.methode : null;
+      const controlLot = chosenRow?.noLot || lot?.noLot || null;
+      const tea = lot?.tea || (masterTea ? parseNumSafe(masterTea.nilaiTEa) : null);
+
+      let cvLab: number | null = null;
+      if (validLevelRows.length >= 2) {
+        const vals = validLevelRows.map((r) => parseNumSafe(r[curLevelKey])!).filter((v) => v !== null);
+        const desc = computeDescriptiveStats(vals);
+        cvLab = desc.cv;
+      }
+
       participantDataList.push({
         hospitalUsername: username,
         hospitalName,
+        level: curLvl,
+        usedValue: usedVal !== null ? Math.round(usedVal * 10000) / 10000 : null,
+        originalValue: parseNumSafe(chosenRow[curLevelKey]),
+        sourceCount: validLevelRows.length,
+        date: dateStr,
+        unit,
+        analyzer,
+        method,
+        controlLot,
+        tea,
+        teaSource: lot?.tea ? "Lot QC Laboratorium" : masterTea ? "Daftar TEa Referensi" : null,
+        cvLab: cvLab !== null ? Math.round(cvLab * 100) / 100 : null,
+        validationStatus: "valid",
+        exclusionReason: null,
+      });
+      addedAnyLevel = true;
+    }
+
+    if (!addedAnyLevel) {
+      participantDataList.push({
+        hospitalUsername: username,
+        hospitalName,
+        level: isAllLevel ? "ALL" : level,
         usedValue: null,
         originalValue: null,
         sourceCount: rows.length,
         date: rows[rows.length - 1].tanggal,
         validationStatus: "excluded",
-        exclusionReason: `Data QC ada (${rows.length} entri), tetapi nilai ${level} kosong/nol`,
+        exclusionReason: isAllLevel
+          ? `Data QC ada (${rows.length} entri), tetapi nilai semua level (L1, L2, L3) kosong/nol`
+          : `Data QC ada (${rows.length} entri), tetapi nilai ${level} kosong/nol`,
         unit: null,
         analyzer: rows[0].namaAlat,
         method: null,
@@ -385,247 +517,210 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
         tea: null,
         cvLab: null,
       });
-      continue;
     }
-
-    // Terapkan aturan agregasi
-    let chosenRow: any = null;
-    let usedVal: number | null = null;
-    let dateStr: string | null = null;
-
-    if (aggregationRule === "single_date") {
-      const targetDate = singleDate || startDate;
-      const onDateRows = validLevelRows.filter((r) => r.tanggal === targetDate);
-      if (onDateRows.length > 0) {
-        chosenRow = onDateRows[onDateRows.length - 1];
-        const sum = onDateRows.reduce((a, c) => a + parseNumSafe(c[levelKey])!, 0);
-        usedVal = sum / onDateRows.length;
-        dateStr = targetDate;
-      } else {
-        participantDataList.push({
-          hospitalUsername: username,
-          hospitalName,
-          usedValue: null,
-          originalValue: null,
-          sourceCount: validLevelRows.length,
-          date: targetDate,
-          validationStatus: "excluded",
-          exclusionReason: `Tidak ada data QC pada tanggal spesifik ${targetDate}`,
-          unit: null,
-          analyzer: validLevelRows[0].namaAlat,
-          controlLot: validLevelRows[0].noLot,
-          tea: null,
-          cvLab: null,
-        });
-        continue;
-      }
-    } else if (aggregationRule === "average") {
-      chosenRow = validLevelRows[validLevelRows.length - 1];
-      const sum = validLevelRows.reduce((a, c) => a + parseNumSafe(c[levelKey])!, 0);
-      usedVal = sum / validLevelRows.length;
-      dateStr = `${startDate} s/d ${endDate}`;
-    } else {
-      // "latest"
-      chosenRow = validLevelRows[validLevelRows.length - 1];
-      usedVal = parseNumSafe(chosenRow[levelKey]);
-      dateStr = chosenRow.tanggal;
-    }
-
-    // Ambil metadata alat, metode, satuan, dan lot
-    let lot = chosenRow ? lotMap.get(chosenRow.lotID) : null;
-    if (!lot && chosenRow) {
-      lot = lots.find(
-        (l) =>
-          l.ownerUsername === username &&
-          (l.id === chosenRow.lotID || (chosenRow.noLot && l.noLot?.toLowerCase() === chosenRow.noLot?.toLowerCase()))
-      ) || null;
-    }
-    const unit = lot?.satuan || null;
-    const analyzer = chosenRow?.namaAlat || lot?.namaAlat || null;
-    const method = (lot?.methode && lot.methode !== "-") ? lot.methode : null;
-    const controlLot = chosenRow?.noLot || lot?.noLot || null;
-    const tea = lot?.tea || (masterTea ? parseNumSafe(masterTea.nilaiTEa) : null);
-
-    // Hitung CV analitik laboratorium aktual (imprecision) dari kumpulan baris peserta ini
-    let cvLab: number | null = null;
-    if (validLevelRows.length >= 2) {
-      const vals = validLevelRows.map((r) => parseNumSafe(r[levelKey])!).filter(Boolean);
-      const m = vals.reduce((a, c) => a + c, 0) / vals.length;
-      if (m > 0) {
-        const vSum = vals.reduce((a, c) => a + Math.pow(c - m, 2), 0) / (vals.length - 1);
-        cvLab = (Math.sqrt(vSum) / m) * 100;
-      }
-    }
-
-    participantDataList.push({
-      hospitalUsername: username,
-      hospitalName,
-      usedValue: usedVal !== null ? Math.round(usedVal * 10000) / 10000 : null,
-      originalValue: parseNumSafe(chosenRow[levelKey]),
-      sourceCount: validLevelRows.length,
-      date: dateStr,
-      unit,
-      analyzer,
-      method,
-      controlLot,
-      tea,
-      teaSource: lot?.tea ? "Lot QC Laboratorium" : masterTea ? "Daftar TEa Referensi" : null,
-      cvLab: cvLab !== null ? Math.round(cvLab * 100) / 100 : null,
-      validationStatus: "valid",
-      exclusionReason: null,
-    });
   }
 
-  // Kumpulkan nilai-nilai valid untuk perhitungan statistik kelompok
-  const validValues = participantDataList
-    .filter((p) => p.validationStatus === "valid" && p.usedValue !== null)
-    .map((p) => p.usedValue as number);
+  // Kumpulkan nilai-nilai valid
+  const validParticipants = participantDataList.filter((p) => p.validationStatus === "valid" && p.usedValue !== null);
+  const excludedParticipants = participantDataList.filter((p) => p.validationStatus !== "valid" || p.usedValue === null);
+  const validValues = validParticipants.map((p) => p.usedValue as number);
 
-  // 1. Hitung Statistik Deskriptif
+  // 1. Hitung Statistik Deskriptif & Robust
   const descStats = computeDescriptiveStats(validValues);
-
-  // 2. Hitung Statistik Robust Algorithm A (ISO 13528:2022)
   const robustStats = computeAlgorithmA(validValues);
 
-  // 3. Tentukan Target (Assigned Value) & SDPA
-  let targetVal: number | null = null;
+  let finalEvaluations: any[] = [];
+  let targetValFinal: number | null = null;
   let targetSourceStr = "";
-  if (targetType === "reference_value" && assignedValueCustom !== null) {
-    targetVal = assignedValueCustom;
-    targetSourceStr = assignedValueSource || "Nilai Acuan Independen / Kalibrator";
-  } else if (targetType === "pme_target" && assignedValueCustom !== null) {
-    targetVal = assignedValueCustom;
-    targetSourceStr = assignedValueSource || "Target Penyelenggara PME";
-  } else {
-    targetVal = robustStats.robustMean;
-    targetSourceStr = "Nilai Konsensus Robust Kelompok (ISO 13528 Algorithm A)";
-  }
-
-  let sdpaVal: number | null = null;
+  let sdpaValFinal: number | null = null;
   let sdpaSourceStr = "";
   let isFormalPme = false;
 
-  if (sdpaType === "fixed_sdpa" && sdpaValueCustom !== null && sdpaValueCustom > 0) {
-    sdpaVal = sdpaValueCustom;
-    sdpaSourceStr = sdpaSource || "SDPA Ditetapkan Secara Independen (Kriteria Formal PME)";
-    isFormalPme = true;
-  } else if (sdpaType === "tea_derived" && targetVal !== null) {
-    // Estimasi SDPA berbasis TEa (mis. TEa / 3)
-    const teaRef = masterTea ? parseNumSafe(masterTea.nilaiTEa) : null;
-    if (teaRef && teaRef > 0) {
-      sdpaVal = Math.round(((teaRef / 100) * targetVal * 10000) / 3) / 10000;
-      sdpaSourceStr = `Diturunkan dari TEa (${teaRef}% / 3) Berdasarkan Target Acuan`;
-      isFormalPme = true;
+  if (!isAllLevel) {
+    // Mode Single Level (L1 / L2 / L3)
+    if (targetType === "reference_value" && assignedValueCustom !== null) {
+      targetValFinal = assignedValueCustom;
+      targetSourceStr = assignedValueSource || "Nilai Acuan Independen / Kalibrator";
+    } else if (targetType === "pme_target" && assignedValueCustom !== null) {
+      targetValFinal = assignedValueCustom;
+      targetSourceStr = assignedValueSource || "Target Penyelenggara PME";
+    } else {
+      targetValFinal = robustStats.robustMean;
+      targetSourceStr = "Nilai Konsensus Robust Kelompok (ISO 13528 Algorithm A)";
     }
-  }
 
-  if (sdpaVal === null) {
-    // Fallback: gunakan Robust SD kelompok hanya sebagai penyebaran relatif peer group
-    sdpaVal = robustStats.robustSd;
-    sdpaSourceStr = "Robust SD Kelompok — Digunakan untuk Skor Relatif Peer Group (Bukan SDPA Formal PME)";
+    if (sdpaType === "fixed_sdpa" && sdpaValueCustom !== null && sdpaValueCustom > 0) {
+      sdpaValFinal = sdpaValueCustom;
+      sdpaSourceStr = sdpaSource || "SDPA Ditetapkan Secara Independen (Kriteria Formal PME)";
+      isFormalPme = true;
+    } else if (sdpaType === "tea_derived" && targetValFinal !== null) {
+      const teaRef = masterTea ? parseNumSafe(masterTea.nilaiTEa) : null;
+      if (teaRef && teaRef > 0) {
+        sdpaValFinal = Math.round(((teaRef / 100) * targetValFinal * 10000) / 3) / 10000;
+        sdpaSourceStr = `Diturunkan dari TEa (${teaRef}% / 3) Berdasarkan Target Acuan`;
+        isFormalPme = true;
+      }
+    }
+    if (sdpaValFinal === null) {
+      sdpaValFinal = robustStats.robustSd;
+      sdpaSourceStr = "Robust SD Kelompok — Digunakan untuk Skor Relatif Peer Group";
+      isFormalPme = false;
+    }
+
+    const evals = evaluateParticipants({
+      participants: participantDataList,
+      targetValue: targetValFinal,
+      targetSource: targetSourceStr,
+      sdpaValue: sdpaValFinal,
+      sdpaSource: sdpaSourceStr,
+      isFormalPme,
+      robustMean: robustStats.robustMean,
+      robustSd: robustStats.robustSd,
+    });
+    evals.forEach((e, idx) => {
+      (e as any).level = participantDataList[idx]?.level || level;
+    });
+    finalEvaluations = evals;
+  } else {
+    // Mode "ALL" (Semua Level)
+    targetValFinal = robustStats.robustMean;
+    targetSourceStr = "Multi-Level Konsensus Robust (ISO 13528 Algorithm A)";
+    sdpaValFinal = robustStats.robustSd;
+    sdpaSourceStr = "Multi-Level Robust SD Kelompok";
     isFormalPme = false;
-  }
 
-  // 4. Hitung Evaluasi Peserta (Z-Score Formal vs Skor Relatif vs Sigma Metrik)
-  const evaluations = evaluateParticipants({
-    participants: participantDataList,
-    targetValue: targetVal,
-    targetSource: targetSourceStr,
-    sdpaValue: sdpaVal,
-    sdpaSource: sdpaSourceStr,
-    isFormalPme,
-    robustMean: robustStats.robustMean,
-    robustSd: robustStats.robustSd,
-  });
+    // Hitung konsensus per level untuk evaluasi akurat
+    const levelConfigs: Record<string, { rob: RobustStats; target: number | null; sdpa: number | null }> = {};
+    for (const lvl of ["L1", "L2", "L3"]) {
+      const valsLvl = validParticipants.filter((p) => p.level === lvl).map((p) => p.usedValue as number);
+      const rob = computeAlgorithmA(valsLvl);
+      levelConfigs[lvl] = {
+        rob,
+        target: rob.robustMean,
+        sdpa: rob.robustSd || (rob.robustMean ? rob.robustMean * 0.05 : 0.001),
+      };
+    }
+
+    const evaluatedList: any[] = [];
+    for (const lvl of ["L1", "L2", "L3"]) {
+      const partLvl = validParticipants.filter((p) => p.level === lvl);
+      if (partLvl.length === 0) continue;
+      const cfgLvl = levelConfigs[lvl];
+      const evals = evaluateParticipants({
+        participants: partLvl,
+        targetValue: cfgLvl.target,
+        targetSource: `Konsensus Robust ${lvl}`,
+        sdpaValue: cfgLvl.sdpa,
+        sdpaSource: `Robust SD ${lvl}`,
+        isFormalPme: false,
+        robustMean: cfgLvl.rob.robustMean,
+        robustSd: cfgLvl.rob.robustSd,
+      });
+      evals.forEach((e) => {
+        (e as any).level = lvl;
+        (e as any).levelTarget = cfgLvl.target;
+        (e as any).levelSdpa = cfgLvl.sdpa;
+      });
+      evaluatedList.push(...evals);
+    }
+
+    // Masukkan peserta yang excluded
+    if (excludedParticipants.length > 0) {
+      const excEvals = evaluateParticipants({
+        participants: excludedParticipants,
+        targetValue: null,
+        targetSource: "-",
+        sdpaValue: null,
+        sdpaSource: "-",
+        isFormalPme: false,
+        robustMean: null,
+        robustSd: null,
+      });
+      excEvals.forEach((e, idx) => {
+        (e as any).level = excludedParticipants[idx]?.level || "ALL";
+      });
+      evaluatedList.push(...excEvals);
+    }
+
+    finalEvaluations = evaluatedList;
+  }
 
   // 5. Hitung Multi-Tier Benchmark Grouping (Model Laporan Standar Uji PME)
-  // Tier 1: Seluruh Peserta
-  const validEvaluations = evaluations.filter((e) => e.validationStatus === "valid" && e.usedValue !== null);
-  const tierAllN = validEvaluations.length;
-
-  // Tier 2: Kelompok Metode
-  const methodGroups = new Map<string, number[]>();
-  validEvaluations.forEach((e) => {
-    if (e.method && e.usedValue !== null) {
-      const key = e.method.trim().toLowerCase();
-      const list = methodGroups.get(key) || [];
-      list.push(e.usedValue);
-      methodGroups.set(key, list);
-    }
-  });
-  const methodStatsMap = new Map<string, { n: number; target: number | null; sdpa: number | null }>();
-  methodGroups.forEach((vals, key) => {
-    if (vals.length >= 6) {
-      const rob = computeAlgorithmA(vals);
-      methodStatsMap.set(key, {
-        n: vals.length,
-        target: rob.robustMean !== null ? Math.round(rob.robustMean * 100) / 100 : null,
-        sdpa: rob.robustSd !== null ? Math.round(rob.robustSd * 100) / 100 : null,
-      });
-    } else {
-      methodStatsMap.set(key, { n: vals.length, target: null, sdpa: null });
-    }
-  });
-
-  // Tier 3: Kelompok Alat
-  const analyzerGroups = new Map<string, number[]>();
-  validEvaluations.forEach((e) => {
-    if (e.analyzer && e.usedValue !== null) {
-      const key = e.analyzer.trim().toLowerCase();
-      const list = analyzerGroups.get(key) || [];
-      list.push(e.usedValue);
-      analyzerGroups.set(key, list);
-    }
-  });
-  const analyzerStatsMap = new Map<string, { n: number; target: number | null; sdpa: number | null }>();
-  analyzerGroups.forEach((vals, key) => {
-    if (vals.length >= 6) {
-      const rob = computeAlgorithmA(vals);
-      analyzerStatsMap.set(key, {
-        n: vals.length,
-        target: rob.robustMean !== null ? Math.round(rob.robustMean * 100) / 100 : null,
-        sdpa: rob.robustSd !== null ? Math.round(rob.robustSd * 100) / 100 : null,
-      });
-    } else {
-      analyzerStatsMap.set(key, { n: vals.length, target: null, sdpa: null });
-    }
-  });
+  const validEvaluations = finalEvaluations.filter((e) => e.validationStatus === "valid" && e.usedValue !== null);
 
   // Pasang Tiers ke setiap evaluasi peserta
-  evaluations.forEach((item) => {
+  finalEvaluations.forEach((item) => {
+    const itemLevel = (item as any).level || level;
+    // Sub-populasi peserta di level yang sama
+    const peerSubset = isAllLevel
+      ? validEvaluations.filter((e) => (e as any).level === itemLevel)
+      : validEvaluations;
+
+    const tierAllN = peerSubset.length;
+    const itemTarget = (item as any).levelTarget !== undefined ? (item as any).levelTarget : targetValFinal;
+    const itemSdpa = (item as any).levelSdpa !== undefined ? (item as any).levelSdpa : sdpaValFinal;
+
     const zAll = item.zScore !== null ? item.zScore : item.peerRelativeScore;
     const katAll = zAll !== null ? (Math.abs(zAll) <= 2 ? "OK" : Math.abs(zAll) <= 3 ? "Peringatan" : "Tindakan") : "-";
     const ketAll = zAll !== null ? (Math.abs(zAll) <= 2 ? "Memuaskan" : Math.abs(zAll) <= 3 ? "Meragukan" : "Tidak Memuaskan") : "Tidak dianalisa";
 
-    // Kelompok Metode
+    // Kelompok Metode (pada level yang sama)
     const mKey = item.method ? item.method.trim().toLowerCase() : "";
-    const mStat = methodStatsMap.get(mKey);
+    let mStat: { n: number; target: number | null; sdpa: number | null } | null = null;
     let mZ: number | null = null;
     let mKat = "-";
     let mKet = "Tidak dianalisa";
-    if (mStat && mStat.n >= 6 && mStat.target !== null && mStat.sdpa !== null && mStat.sdpa > 0 && item.usedValue !== null) {
-      mZ = Math.round(((item.usedValue - mStat.target) / mStat.sdpa) * 100) / 100;
-      mKat = Math.abs(mZ) <= 2 ? "OK" : Math.abs(mZ) <= 3 ? "Peringatan" : "Tindakan";
-      mKet = Math.abs(mZ) <= 2 ? "Memuaskan" : Math.abs(mZ) <= 3 ? "Meragukan" : "Tidak Memuaskan";
+
+    if (mKey) {
+      const methodVals = peerSubset.filter((e) => e.method && e.method.trim().toLowerCase() === mKey && e.usedValue !== null).map((e) => e.usedValue as number);
+      if (methodVals.length >= 6) {
+        const rob = computeAlgorithmA(methodVals);
+        mStat = {
+          n: methodVals.length,
+          target: rob.robustMean !== null ? Math.round(rob.robustMean * 100) / 100 : null,
+          sdpa: rob.robustSd !== null ? Math.round(rob.robustSd * 100) / 100 : null,
+        };
+        if (mStat.target !== null && mStat.sdpa !== null && mStat.sdpa > 0 && item.usedValue !== null) {
+          mZ = Math.round(((item.usedValue - mStat.target) / mStat.sdpa) * 100) / 100;
+          mKat = Math.abs(mZ) <= 2 ? "OK" : Math.abs(mZ) <= 3 ? "Peringatan" : "Tindakan";
+          mKet = Math.abs(mZ) <= 2 ? "Memuaskan" : Math.abs(mZ) <= 3 ? "Meragukan" : "Tidak Memuaskan";
+        }
+      } else {
+        mStat = { n: methodVals.length, target: null, sdpa: null };
+      }
     }
 
-    // Kelompok Alat
+    // Kelompok Alat (pada level yang sama)
     const aKey = item.analyzer ? item.analyzer.trim().toLowerCase() : "";
-    const aStat = analyzerStatsMap.get(aKey);
+    let aStat: { n: number; target: number | null; sdpa: number | null } | null = null;
     let aZ: number | null = null;
     let aKat = "-";
     let aKet = "Tidak dianalisa";
-    if (aStat && aStat.n >= 6 && aStat.target !== null && aStat.sdpa !== null && aStat.sdpa > 0 && item.usedValue !== null) {
-      aZ = Math.round(((item.usedValue - aStat.target) / aStat.sdpa) * 100) / 100;
-      aKat = Math.abs(aZ) <= 2 ? "OK" : Math.abs(aZ) <= 3 ? "Peringatan" : "Tindakan";
-      aKet = Math.abs(aZ) <= 2 ? "Memuaskan" : Math.abs(aZ) <= 3 ? "Meragukan" : "Tidak Memuaskan";
+
+    if (aKey) {
+      const analyzerVals = peerSubset.filter((e) => e.analyzer && e.analyzer.trim().toLowerCase() === aKey && e.usedValue !== null).map((e) => e.usedValue as number);
+      if (analyzerVals.length >= 6) {
+        const rob = computeAlgorithmA(analyzerVals);
+        aStat = {
+          n: analyzerVals.length,
+          target: rob.robustMean !== null ? Math.round(rob.robustMean * 100) / 100 : null,
+          sdpa: rob.robustSd !== null ? Math.round(rob.robustSd * 100) / 100 : null,
+        };
+        if (aStat.target !== null && aStat.sdpa !== null && aStat.sdpa > 0 && item.usedValue !== null) {
+          aZ = Math.round(((item.usedValue - aStat.target) / aStat.sdpa) * 100) / 100;
+          aKat = Math.abs(aZ) <= 2 ? "OK" : Math.abs(aZ) <= 3 ? "Peringatan" : "Tindakan";
+          aKet = Math.abs(aZ) <= 2 ? "Memuaskan" : Math.abs(aZ) <= 3 ? "Meragukan" : "Tidak Memuaskan";
+        }
+      } else {
+        aStat = { n: analyzerVals.length, target: null, sdpa: null };
+      }
     }
 
     (item as any).tiers = {
       all: {
         n: tierAllN,
-        target: targetVal !== null ? Math.round(targetVal * 100) / 100 : null,
-        sdpa: sdpaVal !== null ? Math.round(sdpaVal * 100) / 100 : null,
+        target: itemTarget !== null ? Math.round(itemTarget * 100) / 100 : null,
+        sdpa: itemSdpa !== null ? Math.round(itemSdpa * 100) / 100 : null,
         zScore: zAll !== null ? Math.round(zAll * 100) / 100 : null,
         kategori: katAll,
         keterangan: ketAll,
@@ -662,10 +757,10 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
       method: methodFilter || null,
       controlLot: lotFilter || null,
       targetType,
-      assignedValue: targetVal,
+      assignedValue: targetValFinal,
       assignedValueSource: targetSourceStr,
       sdpaType,
-      sdpaValue: sdpaVal,
+      sdpaValue: sdpaValFinal,
       sdpaSource: sdpaSourceStr,
       isFormalPme,
     },
@@ -673,11 +768,11 @@ export async function runPeerGroupAnalysis(args: any[], session: SessionData | n
       totalSelected: selectedHospitals.length,
       totalWithData: validValues.length,
       totalValid: validValues.length,
-      totalExcluded: selectedHospitals.length - validValues.length,
+      totalExcluded: selectedHospitals.length - new Set(validParticipants.map((p) => p.hospitalUsername)).size,
       descriptive: descStats,
       robust: robustStats,
     },
-    evaluations,
+    evaluations: finalEvaluations,
   };
 }
 

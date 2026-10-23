@@ -2408,7 +2408,7 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
     <h4 style="margin:0 0 10px;color:var(--primary);font-size:.92rem"><i class="fas fa-sliders-h"></i> 1. Parameter, Periode &amp; Karakteristik Kelompok</h4>
     <div class="form-row form-row-4" style="margin-bottom:10px">
       <div class="form-group"><label>Parameter *</label><select id="pgParam" onchange="onPgParamChange()"></select></div>
-      <div class="form-group"><label>Level QC *</label><select id="pgLevel"><option value="L1">Level 1 (Normal)</option><option value="L2">Level 2 (Patologis Rendah/Tinggi)</option><option value="L3">Level 3 (Patologis Tinggi)</option></select></div>
+      <div class="form-group"><label>Level QC *</label><select id="pgLevel"><option value="ALL">Semua Level (L1, L2, L3)</option><option value="L1" selected>Level 1 (Normal)</option><option value="L2">Level 2 (Patologis Rendah/Tinggi)</option><option value="L3">Level 3 (Patologis Tinggi)</option></select></div>
       <div class="form-group"><label>Preset Tanggal</label><select id="pgDatePreset" onchange="applyPgDatePreset()"><option value="this_month">Bulan Berjalan</option><option value="last_month">Bulan Sebelumnya</option><option value="30d">30 Hari Terakhir</option><option value="7d">7 Hari Terakhir</option><option value="today">Hari Ini</option><option value="ytd">Awal Tahun s/d Hari Ini</option><option value="custom" selected>Rentang Tanggal Khusus</option></select></div>
       <div class="form-group"><label>Aturan Agregasi Data *</label><select id="pgAggRule" onchange="togglePgSingleDate()"><option value="latest">Hasil Terakhir dalam Periode</option><option value="average">Rata-rata Periode per Rumah Sakit</option><option value="single_date">Hasil pada Tanggal Tertentu</option></select></div>
     </div>
@@ -9617,11 +9617,12 @@ function renderPgIndividualTable(res){
     var origVal = e.originalValue !== null ? e.originalValue.toFixed(2) : '-';
     var usedVal = e.usedValue !== null ? '<strong>' + e.usedValue.toFixed(2) + '</strong>' : '<span style="color:#ef4444">-</span>';
 
+    var itemLevel = e.level || res.config.level;
     html += '<tr>' +
       '<td>' + (i+1) + '</td>' +
-      '<td><strong>' + escH(e.hospitalName) + '</strong><br><small style="color:var(--text-secondary)">@' + escH(e.hospitalUsername) + '</small></td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong> <span class="badge badge-secondary" style="font-size:.7rem">' + escH(itemLevel) + '</span><br><small style="color:var(--text-secondary)">@' + escH(e.hospitalUsername) + '</small></td>' +
       '<td>' + escH(res.config.parameter) + '</td>' +
-      '<td><span class="badge badge-secondary">' + escH(res.config.level) + '</span></td>' +
+      '<td><span class="badge badge-secondary">' + escH(itemLevel) + '</span></td>' +
       '<td>' + origVal + '</td>' +
       '<td>' + usedVal + '</td>' +
       '<td>' + escH(e.unit || '-') + '</td>' +
@@ -9701,6 +9702,9 @@ function renderPgEvaluationTable(res){
       catBadge = '<span class="badge badge-secondary">-</span>';
     }
 
+    var itemTarget = (e.levelTarget !== undefined && e.levelTarget !== null) ? e.levelTarget : res.config.assignedValue;
+    var itemSdpa = (e.levelSdpa !== undefined && e.levelSdpa !== null) ? e.levelSdpa : res.config.sdpaValue;
+
     var zFormalStr = (e.zScore !== null)
       ? '<strong>' + (e.zScore >= 0 ? '+' : '') + e.zScore.toFixed(2) + '</strong>'
       : '<span style="color:var(--text-secondary);font-size:.78rem">SDPA Formal belum ditetapkan</span>';
@@ -9710,13 +9714,14 @@ function renderPgEvaluationTable(res){
       : '-';
 
     var diffStr = e.diffTarget !== null ? (e.diffTarget >= 0 ? '+' : '') + e.diffTarget.toFixed(2) : '-';
+    var itemLevel = e.level || res.config.level;
 
     html += '<tr>' +
       '<td>' + (i+1) + '</td>' +
-      '<td><strong>' + escH(e.hospitalName) + '</strong><br><small style="color:var(--text-secondary)">@' + escH(e.hospitalUsername) + '</small></td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong> <span class="badge badge-secondary" style="font-size:.7rem">' + escH(itemLevel) + '</span><br><small style="color:var(--text-secondary)">@' + escH(e.hospitalUsername) + '</small></td>' +
       '<td>' + (e.usedValue !== null ? e.usedValue.toFixed(2) : '-') + '</td>' +
-      '<td>' + (res.config.assignedValue !== null ? res.config.assignedValue.toFixed(2) : '-') + '</td>' +
-      '<td>' + (res.config.sdpaValue !== null ? res.config.sdpaValue.toFixed(3) : '-') + '</td>' +
+      '<td>' + (itemTarget !== null ? itemTarget.toFixed(2) : '-') + '</td>' +
+      '<td>' + (itemSdpa !== null ? itemSdpa.toFixed(3) : '-') + '</td>' +
       '<td>' + diffStr + '</td>' +
       '<td>' + zFormalStr + '</td>' +
       '<td>' + zRelStr + '</td>' +
@@ -9755,16 +9760,18 @@ function renderPgSigmaTable(res){
       sigBadge = '<span style="color:var(--text-secondary);font-size:.78rem">' + escH(e.sigmaCategory || 'Data Tidak Lengkap') + '</span>';
     }
 
+    var itemTarget = (e.levelTarget !== undefined && e.levelTarget !== null) ? e.levelTarget : res.config.assignedValue;
     var biasAbsStr = e.biasAbs !== null ? e.biasAbs.toFixed(2) : '-';
     var biasPctStr = e.biasPct !== null ? e.biasPct.toFixed(2) + '%' : '-';
     var cvLabStr = e.cvLab !== null ? e.cvLab.toFixed(2) + '%' : '<span style="color:var(--text-secondary)">N/A (harian)</span>';
     var teaStr = e.tea !== null ? e.tea.toFixed(1) + '%' : '-';
+    var itemLevel = e.level || res.config.level;
 
     html += '<tr>' +
       '<td>' + (i+1) + '</td>' +
-      '<td><strong>' + escH(e.hospitalName) + '</strong></td>' +
+      '<td><strong>' + escH(e.hospitalName) + '</strong> <span class="badge badge-secondary" style="font-size:.7rem">' + escH(itemLevel) + '</span></td>' +
       '<td>' + escH(res.config.parameter) + '</td>' +
-      '<td>' + (res.config.assignedValue !== null ? res.config.assignedValue.toFixed(2) : '-') + '</td>' +
+      '<td>' + (itemTarget !== null ? itemTarget.toFixed(2) : '-') + '</td>' +
       '<td>' + biasAbsStr + '</td>' +
       '<td>' + biasPctStr + '</td>' +
       '<td>' + cvLabStr + '</td>' +
@@ -9903,7 +9910,8 @@ function renderPgCharts(res){
     if(validLJ.length > 0){
       var ljLabels = validLJ.map(function(e, idx){
         var shortName = e.hospitalName.length > 15 ? e.hospitalName.slice(0, 15) + '..' : e.hospitalName;
-        return (idx + 1) + '. ' + shortName;
+        var lvlTag = e.level ? ' (' + e.level + ')' : '';
+        return (idx + 1) + '. ' + shortName + lvlTag;
       });
       var ljZScores = validLJ.map(function(e){
         return e.zScore !== null ? Number(e.zScore.toFixed(2)) : Number(e.peerRelativeScore.toFixed(2));
@@ -10012,7 +10020,9 @@ function renderPgCharts(res){
                 title: function(items){
                   if(!items.length) return '';
                   var idx = items[0].dataIndex;
-                  return validLJ[idx].hospitalName + ' (@' + validLJ[idx].hospitalUsername + ')';
+                  var e = validLJ[idx];
+                  var lvlTag = e.level ? ' [' + e.level + ']' : '';
+                  return e.hospitalName + lvlTag + ' (@' + e.hospitalUsername + ')';
                 },
                 label: function(item){
                   var idx = item.dataIndex;
@@ -10020,6 +10030,7 @@ function renderPgCharts(res){
                   var val = e.usedValue !== null ? e.usedValue.toFixed(2) + ' ' + (e.unit || '') : '-';
                   var z = item.raw >= 0 ? '+' + item.raw : item.raw;
                   return [
+                    'Level QC: ' + (e.level || res.config.level),
                     'Nilai QC Lab: ' + val,
                     'Z-Score: ' + z,
                     'Kategori: ' + (e.evalCategory || '-'),
@@ -10466,7 +10477,7 @@ function buildFormalPmeHtml(res, recipientItem, isModal){
         'HASIL EVALUASI BIDANG PATOLOGI PARAMETER ' + escH((cfg.parameter || '').toUpperCase()) +
       '</h3>' +
       '<div style="font-weight:700;font-size:.88rem;color:#334155;margin-top:3px">' +
-        'SIKLUS 1 TAHUN ' + curYear + ' - SAMPEL 1 (LEVEL ' + escH((cfg.level || 'L1').toUpperCase()) + ')' +
+        'SIKLUS 1 TAHUN ' + curYear + ' - SAMPEL 1 (LEVEL ' + escH(((item.level || cfg.level) || 'L1').toUpperCase()) + ')' +
       '</div>' +
     '</div>' +
 
@@ -10476,7 +10487,7 @@ function buildFormalPmeHtml(res, recipientItem, isModal){
         '<td style="width:18%;font-weight:700;padding:3px 6px;border:none">Kode Peserta</td>' +
         '<td style="width:34%;padding:3px 6px;border:none">: <strong style="color:#0f172a">LAB-' + escH((item.hospitalUsername || '').toUpperCase()) + '</strong></td>' +
         '<td style="width:18%;font-weight:700;padding:3px 6px;border:none">Sampel / Bahan</td>' +
-        '<td style="width:30%;padding:3px 6px;border:none">: Level ' + escH(cfg.level) + ' (Lot: ' + escH(item.controlLot || '-') + ')</td>' +
+        '<td style="width:30%;padding:3px 6px;border:none">: Level ' + escH(item.level || cfg.level) + ' (Lot: ' + escH(item.controlLot || '-') + ')</td>' +
       '</tr>' +
       '<tr>' +
         '<td style="font-weight:700;padding:3px 6px;border:none">Nama Peserta</td>' +
