@@ -677,6 +677,205 @@ td { border-bottom: 1px solid #eee !important; }
 /* Flex item .main-content tidak boleh ikut melar (min-width:auto) — supaya
  * .table-wrap menjadi scroll container horizontal saat tabel Bias PME aktif */
 .main-content:has(#pageBiaspme.active){min-width:0}
+
+/* ── PEER GROUP PME/PMI RESPONSIVE & HORIZONTAL RULER SCROLL SYSTEM ── */
+.main-content:has(#pagePeergroup.active){min-width:0}
+#pagePeergroup { width: 100%; box-sizing: border-box; }
+#pagePeergroup .card { max-width: 100%; }
+
+/* Responsive Filter Layout */
+@media (max-width: 1100px) {
+  #pagePeergroup .form-row-4 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+}
+@media (max-width: 640px) {
+  #pagePeergroup .form-row-4 {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  #pagePeergroup .card-body {
+    padding: 12px 10px !important;
+  }
+  #pagePeergroup .pg-action-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  #pagePeergroup .pg-action-buttons {
+    width: 100% !important;
+    margin-left: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  #pagePeergroup .pg-action-buttons .btn {
+    width: 100% !important;
+    justify-content: center;
+    font-size: .78rem;
+    padding: 6px 8px;
+  }
+}
+
+/* Horizontal Tab Navigation */
+.pg-tab-nav {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.pg-tab-nav::-webkit-scrollbar {
+  height: 4px;
+}
+.pg-tab-nav::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* RULER HORIZONTAL COMPONENT */
+.pg-ruler-container {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 8px 12px;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.pg-ruler-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: .8rem;
+}
+.pg-ruler-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.pg-ruler-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.pg-ruler-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pg-ruler-btn:hover {
+  background: var(--primary-light, #e0e7ff);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.pg-ruler-btn:active {
+  transform: translateY(1px);
+}
+.pg-ruler-track {
+  height: 26px;
+  background-color: #f1f5f9;
+  background-image: 
+    repeating-linear-gradient(90deg, #cbd5e1 0, #cbd5e1 1px, transparent 1px, transparent 10px),
+    repeating-linear-gradient(90deg, #94a3b8 0, #94a3b8 1.5px, transparent 1.5px, transparent 50px),
+    repeating-linear-gradient(90deg, #475569 0, #475569 2px, transparent 2px, transparent 100px);
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+}
+.pg-ruler-thumb {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 0;
+  min-width: 45px;
+  background: rgba(99, 102, 241, 0.28);
+  border: 2px solid var(--primary);
+  border-radius: 3px;
+  cursor: grab;
+  transition: left 0.05s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .68rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+.pg-ruler-thumb:active {
+  cursor: grabbing;
+}
+
+/* DUAL SCROLL TABLE CONTAINER (Horizontal + Vertikal) */
+.pg-table-scroll-wrap {
+  width: 100%;
+  max-height: 560px;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.pg-table-scroll-wrap table {
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+.pg-table-scroll-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark, #1e3a8a) 100%);
+  color: #fff;
+  border-bottom: 2px solid #0f172a;
+  white-space: nowrap;
+}
+
+/* Prominent Dual Scrollbars */
+.pg-table-scroll-wrap::-webkit-scrollbar {
+  width: 12px;
+  height: 14px;
+}
+.pg-table-scroll-wrap::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+.pg-table-scroll-wrap::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border: 3px solid #f1f5f9;
+  border-radius: 8px;
+}
+.pg-table-scroll-wrap::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
 /* ── v9.8 ENHANCEMENTS ── */
 .page{animation:fadeInPage .3s ease}
 @keyframesfadeInPage{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -2249,9 +2448,9 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
   <!-- HASIL ANALISIS PEER GROUP -->
   <div id="pgAnalysisResult" style="display:none">
     <!-- Top Action Buttons -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:#f8fafc;padding:10px 14px;border:1px solid var(--border);border-radius:8px">
+    <div class="pg-action-header" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:#f8fafc;padding:10px 14px;border:1px solid var(--border);border-radius:8px">
       <div style="font-weight:700;color:var(--primary);font-size:.95rem"><i class="fas fa-check-circle"></i> Hasil Analisis Peer Group Siap</div>
-      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+      <div class="pg-action-buttons" style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-secondary btn-sm" onclick="printPeerGroupReport()"><i class="fas fa-print"></i> Cetak Laporan Formal</button>
         <button class="btn btn-secondary btn-sm" onclick="pdfPeerGroupReport()"><i class="fas fa-file-pdf"></i> Download PDF</button>
         <button class="btn btn-success btn-sm" onclick="exportPeerGroupExcel()"><i class="fas fa-file-excel"></i> Export Excel (9 Sheet)</button>
@@ -2291,7 +2490,7 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
     </div>
 
     <!-- Grafik Grid -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px">
       <div class="card" style="margin:0;padding:12px">
         <h4 style="margin:0 0 8px;font-size:.88rem;color:var(--text-primary)"><i class="fas fa-chart-bar"></i> Sebaran Hasil Peserta &amp; Nilai Acuan</h4>
         <div style="position:relative;height:240px"><canvas id="chartPgDistribution"></canvas></div>
@@ -2302,20 +2501,50 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
       </div>
     </div>
 
-    <!-- Tab Navigasi Tabel -->
-    <div style="display:flex;gap:6px;border-bottom:2px solid var(--border);margin-bottom:12px;flex-wrap:wrap">
+    <!-- Tab Navigasi Tabel (Scrollable Horizontal) -->
+    <div class="pg-tab-nav">
       <button class="btn btn-sm btn-primary pg-tab-btn" id="pgTabBtn1" onclick="switchPgTab(1)"><i class="fas fa-table"></i> 1. Rekap Data Individual</button>
       <button class="btn btn-sm btn-outline pg-tab-btn" id="pgTabBtn2" onclick="switchPgTab(2)"><i class="fas fa-calculator"></i> 2. Statistik Kelompok (ISO 13528)</button>
       <button class="btn btn-sm btn-outline pg-tab-btn" id="pgTabBtn3" onclick="switchPgTab(3)"><i class="fas fa-award"></i> 3. Evaluasi Z-Score &amp; Skor Relatif</button>
       <button class="btn btn-sm btn-outline pg-tab-btn" id="pgTabBtn4" onclick="switchPgTab(4)"><i class="fas fa-percentage"></i> 4. Evaluasi Sigma Metrik Lab</button>
     </div>
 
+    <!-- RULER HORIZONTAL & NAVIGASI SCROLL DUAL-AXIS -->
+    <div class="pg-ruler-container" id="pgRulerContainer">
+      <div class="pg-ruler-toolbar">
+        <div class="pg-ruler-title">
+          <i class="fas fa-ruler-horizontal"></i>
+          <span>Ruler Horizontal &amp; Navigasi Kolom</span>
+          <span class="badge badge-primary" id="pgScrollPercentBadge" style="font-size:.72rem">0%</span>
+        </div>
+        <div class="pg-ruler-controls">
+          <span style="font-size:.74rem;color:var(--text-secondary);display:flex;align-items:center;gap:4px">
+            <i class="fas fa-arrows-alt-h"></i> Geser Tabel:
+          </span>
+          <button type="button" class="pg-ruler-btn" onclick="scrollPgActiveTable('start')" title="Geser ke Kolom Pertama"><i class="fas fa-angle-double-left"></i> Awal</button>
+          <button type="button" class="pg-ruler-btn" onclick="scrollPgActiveTable(-350)" title="Geser ke Kiri"><i class="fas fa-chevron-left"></i> Kiri</button>
+          <button type="button" class="pg-ruler-btn" onclick="scrollPgActiveTable(350)" title="Geser ke Kanan">Kanan <i class="fas fa-chevron-right"></i></button>
+          <button type="button" class="pg-ruler-btn" onclick="scrollPgActiveTable('end')" title="Geser ke Kolom Terakhir">Akhir <i class="fas fa-angle-double-right"></i></button>
+        </div>
+      </div>
+      <div class="pg-ruler-track" id="pgRulerTrack" onclick="handlePgRulerClick(event)" title="Klik pada skala ruler untuk berpindah kolom horizontal secara instan">
+        <div class="pg-ruler-thumb" id="pgRulerThumb">↔ Geser</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.68rem;color:#64748b;margin-top:3px;padding:0 2px">
+        <span>| Kolom Kiri</span>
+        <span>| 25%</span>
+        <span>| 50%</span>
+        <span>| 75%</span>
+        <span>| Kolom Kanan</span>
+      </div>
+    </div>
+
     <!-- Tab 1: Rekap Data Individual -->
     <div class="pg-tab-content" id="pgTabContent1">
-      <div class="table-wrap">
-        <table>
+      <div class="pg-table-scroll-wrap" id="pgWrapTab1" onscroll="updatePgRuler()">
+        <table style="min-width:1550px">
           <thead>
-            <tr><th>No</th><th>Rumah Sakit / Lab</th><th>Parameter</th><th>Level</th><th>Nilai QC Asli</th><th>Nilai Dipakai</th><th>Satuan</th><th>Alat / Analyzer</th><th>Metode</th><th>Lot Kontrol</th><th>Sumber Data</th><th>Status Validasi</th><th>Keterangan / Alasan</th></tr>
+            <tr><th style="width:45px">No</th><th>Rumah Sakit / Lab</th><th>Parameter</th><th>Level</th><th>Nilai QC Asli</th><th>Nilai Dipakai</th><th>Satuan</th><th>Alat / Analyzer</th><th>Metode</th><th>Lot Kontrol</th><th>Sumber Data</th><th>Status Validasi</th><th>Keterangan / Alasan</th></tr>
           </thead>
           <tbody id="pgTableIndividualBody"></tbody>
         </table>
@@ -2324,10 +2553,10 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
 
     <!-- Tab 2: Statistik Kelompok -->
     <div class="pg-tab-content" id="pgTabContent2" style="display:none">
-      <div class="table-wrap">
-        <table>
+      <div class="pg-table-scroll-wrap" id="pgWrapTab2" onscroll="updatePgRuler()">
+        <table style="min-width:920px">
           <thead>
-            <tr><th>Indikator Statistik</th><th>Nilai</th><th>Keterangan &amp; Metodologi (ISO 13528:2022)</th></tr>
+            <tr><th style="width:260px">Indikator Statistik</th><th style="width:200px">Nilai</th><th>Keterangan &amp; Metodologi (ISO 13528:2022)</th></tr>
           </thead>
           <tbody id="pgTableStatsBody"></tbody>
         </table>
@@ -2336,10 +2565,10 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
 
     <!-- Tab 3: Evaluasi Z-Score & Skor Relatif -->
     <div class="pg-tab-content" id="pgTabContent3" style="display:none">
-      <div class="table-wrap">
-        <table>
+      <div class="pg-table-scroll-wrap" id="pgWrapTab3" onscroll="updatePgRuler()">
+        <table style="min-width:1400px">
           <thead>
-            <tr><th>No</th><th>Rumah Sakit / Lab</th><th>Nilai QC</th><th>Target (Assigned)</th><th>SDPA Acuan</th><th>Selisih</th><th>Z-Score Formal PME</th><th>Skor Relatif Peer Group</th><th>Kategori Evaluasi</th><th>Rekomendasi Mutu</th></tr>
+            <tr><th style="width:45px">No</th><th>Rumah Sakit / Lab</th><th>Nilai QC</th><th>Target (Assigned)</th><th>SDPA Acuan</th><th>Selisih</th><th>Z-Score Formal PME</th><th>Skor Relatif Peer Group</th><th>Kategori Evaluasi</th><th>Rekomendasi Mutu</th></tr>
           </thead>
           <tbody id="pgTableEvaluationBody"></tbody>
         </table>
@@ -2348,10 +2577,10 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
 
     <!-- Tab 4: Evaluasi Sigma Metrik Medis -->
     <div class="pg-tab-content" id="pgTabContent4" style="display:none">
-      <div class="table-wrap">
-        <table>
+      <div class="pg-table-scroll-wrap" id="pgWrapTab4" onscroll="updatePgRuler()">
+        <table style="min-width:1550px">
           <thead>
-            <tr><th>No</th><th>Rumah Sakit / Lab</th><th>Parameter</th><th>Nilai Target</th><th>Bias Absolut</th><th>Bias Relatif (%)</th><th>Imprecision CV Lab (%)</th><th>TEa (%)</th><th>Sumber TEa</th><th>Nilai Sigma</th><th>Kategori Sigma</th><th>Status / Tindak Lanjut</th></tr>
+            <tr><th style="width:45px">No</th><th>Rumah Sakit / Lab</th><th>Parameter</th><th>Nilai Target</th><th>Bias Absolut</th><th>Bias Relatif (%)</th><th>Imprecision CV Lab (%)</th><th>TEa (%)</th><th>Sumber TEa</th><th>Nilai Sigma</th><th>Kategori Sigma</th><th>Status / Tindak Lanjut</th></tr>
           </thead>
           <tbody id="pgTableSigmaBody"></tbody>
         </table>
@@ -9157,7 +9386,80 @@ function renderPgAnalysisResult(res){
   switchPgTab(1);
 }
 
+var activePgTabIdx = 1;
+
+function getActivePgScrollWrap(){
+  return G('pgWrapTab' + activePgTabIdx);
+}
+
+function updatePgRuler(){
+  var wrap = getActivePgScrollWrap();
+  var track = G('pgRulerTrack');
+  var thumb = G('pgRulerThumb');
+  var badge = G('pgScrollPercentBadge');
+  if(!wrap || !track || !thumb) return;
+
+  var scrollLeft = wrap.scrollLeft;
+  var scrollWidth = wrap.scrollWidth;
+  var clientWidth = wrap.clientWidth;
+  var maxScroll = scrollWidth - clientWidth;
+
+  if(maxScroll <= 0){
+    thumb.style.left = '0%';
+    thumb.style.width = '100%';
+    thumb.textContent = 'Full';
+    if(badge) badge.textContent = '100% (Semua kolom terlihat)';
+    return;
+  }
+
+  var ratio = clientWidth / scrollWidth;
+  var thumbWidthPct = Math.max(10, Math.min(100, ratio * 100));
+  var scrollPct = Math.max(0, Math.min(1, scrollLeft / maxScroll));
+  var maxThumbLeftPct = 100 - thumbWidthPct;
+  var thumbLeftPct = scrollPct * maxThumbLeftPct;
+
+  thumb.style.width = thumbWidthPct + '%';
+  thumb.style.left = thumbLeftPct + '%';
+  thumb.textContent = Math.round(scrollPct * 100) + '%';
+  if(badge){
+    badge.textContent = Math.round(scrollPct * 100) + '% (' + Math.round(scrollLeft) + 'px / ' + scrollWidth + 'px)';
+  }
+}
+
+function scrollPgActiveTable(amount){
+  var wrap = getActivePgScrollWrap();
+  if(!wrap) return;
+  if(amount === 'start'){
+    wrap.scrollTo({ left: 0, behavior: 'smooth' });
+  } else if(amount === 'end'){
+    wrap.scrollTo({ left: wrap.scrollWidth, behavior: 'smooth' });
+  } else {
+    wrap.scrollBy({ left: amount, behavior: 'smooth' });
+  }
+  setTimeout(updatePgRuler, 150);
+}
+
+function handlePgRulerClick(e){
+  var wrap = getActivePgScrollWrap();
+  var track = G('pgRulerTrack');
+  if(!wrap || !track) return;
+  var rect = track.getBoundingClientRect();
+  var clickX = e.clientX - rect.left;
+  var pct = Math.max(0, Math.min(1, clickX / rect.width));
+  var maxScroll = wrap.scrollWidth - wrap.clientWidth;
+  wrap.scrollTo({ left: pct * maxScroll, behavior: 'smooth' });
+  setTimeout(updatePgRuler, 100);
+}
+
+// Update ruler on window resize
+window.addEventListener('resize', function(){
+  if(G('pagePeergroup') && G('pagePeergroup').classList.contains('active')){
+    updatePgRuler();
+  }
+});
+
 function switchPgTab(idx){
+  activePgTabIdx = idx;
   for(var i=1; i<=4; i++){
     var btn = G('pgTabBtn' + i);
     var content = G('pgTabContent' + i);
@@ -9174,6 +9476,7 @@ function switchPgTab(idx){
       content.style.display = (i === idx) ? 'block' : 'none';
     }
   }
+  setTimeout(updatePgRuler, 50);
 }
 
 // ------------------------------------------------------------
