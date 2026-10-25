@@ -1085,3 +1085,403 @@ export async function getPeerGroupReportDetail(args: any[], session: SessionData
     penyelenggaraKop,
   };
 }
+
+// ============================================================
+// 6. Opsi Filter & Tabulasi PG QC Analisis (Khusus Superadmin)
+// ============================================================
+
+export async function getPgTabulasiFilterOptions(args: any[], session: SessionData | null) {
+  requireSuperadmin(session);
+
+  // Ambil daftar seluruh user aktif
+  const users = await db.users.findMany({
+    select: {
+      username: true,
+      fullName: true,
+      role: true,
+    },
+    orderBy: { fullName: "asc" },
+  });
+
+  // Nama instansi dari KopSurat
+  const kopList = await db.kopSurat.findMany({
+    where: { key: "namaRS" },
+    select: { ownerUsername: true, value: true },
+  });
+  const hospitalNameMap = new Map<string, string>();
+  kopList.forEach((k) => {
+    if (k.value && k.value.trim()) {
+      hospitalNameMap.set(k.ownerUsername, k.value.trim());
+    }
+  });
+
+  const hospitalOptions = users.map((u) => {
+    const rsName = hospitalNameMap.get(u.username);
+    return {
+      username: u.username,
+      displayName: rsName ? `${rsName} (@${u.username})` : `${u.fullName} (@${u.username})`,
+      fullName: u.fullName,
+      hospitalName: rsName || u.fullName,
+      role: u.role,
+    };
+  });
+
+  // Parameter yang pernah diinput di inputQC
+  const distinctParams = await db.inputQC.findMany({
+    distinct: ["parameter"],
+    select: { parameter: true },
+    where: { parameter: { not: "" } },
+    orderBy: { parameter: "asc" },
+  });
+  const parameters = distinctParams
+    .map((p) => p.parameter.trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  // Nama alat yang pernah digunakan di inputQC
+  const distinctAlat = await db.inputQC.findMany({
+    distinct: ["namaAlat"],
+    select: { namaAlat: true },
+    where: { namaAlat: { not: null, not: "" } },
+    orderBy: { namaAlat: "asc" },
+  });
+  const analyzers = distinctAlat
+    .map((a) => (a.namaAlat ? a.namaAlat.trim() : ""))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  // Nomor Lot QC yang pernah digunakan di inputQC
+  const distinctLots = await db.inputQC.findMany({
+    distinct: ["noLot"],
+    select: { noLot: true },
+    where: { noLot: { not: null, not: "" } },
+    orderBy: { noLot: "asc" },
+  });
+  const lots = distinctLots
+    .map((l) => (l.noLot ? l.noLot.trim() : ""))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  return {
+    ok: true,
+    hospitals: hospitalOptions,
+    parameters,
+    analyzers,
+    lots,
+  };
+}
+
+export async function runPgTabulasiAnalysis(args: any[], session: SessionData | null) {
+  requireSuperadmin(session);
+
+  const payload = args[0] || {};
+  const {
+    startDate,
+    endDate,
+    usernames = [],
+    parameters = [],
+    analyzers = [],
+    lots = [],
+  } = payload;
+
+  if (!startDate || !endDate) {
+    return { ok: false, msg: "Rentang tanggal evaluasi (Mulai & Selesai) wajib diisi" };
+  }
+
+  const selectedUsers: string[] = Array.isArray(usernames) ? usernames.filter(Boolean) : [];
+  if (selectedUsers.length === 0) {
+    return { ok: false, msg: "Pilih minimal satu akun laboratorium/peserta" };
+  }
+
+  const selectedParams: string[] = Array.isArray(parameters) ? parameters.filter(Boolean) : [];
+  if (selectedParams.length === 0) {
+    return { ok: false, msg: "Pilih minimal satu parameter pemeriksaan" };
+  }
+
+  const selectedAnalyzers: string[] = Array.isArray(analyzers) ? analyzers.filter(Boolean) : [];
+  const selectedLots: string[] = Array.isArray(lots) ? lots.filter(Boolean) : [];
+
+  // Bangun alias parameter
+  const allAliases: string[] = [];
+  const aliasToCanonical = new Map<string, string>();
+  for (const p of selectedParams) {
+    const aliases = getParameterAliases(p);
+    for (const al of aliases) {
+      allAliases.push(al);
+      aliasToCanonical.set(al.toUpperCase(), p);
+    }
+  }
+
+  // Siapkan query inputQC
+  const whereClause: any = {
+    ownerUsername: { in: selectedUsers },
+    parameter: { in: Array.from(new Set(allAliases)) },
+    tanggal: {
+      gte: startDate,
+      lte: endDate,
+    },
+  };
+
+  if (selectedAnalyzers.length > 0) {
+    whereClause.namaAlat = { in: selectedAnalyzers };
+  }
+  if (selectedLots.length > 0) {
+    whereClause.noLot = { in: selectedLots };
+  }
+
+  const inputRows = await db.inputQC.findMany({
+    where: whereClause,
+    orderBy: [
+      { ownerUsername: "asc" },
+      { parameter: "asc" },
+      { tanggal: "asc" },
+    ],
+  });
+
+  if (inputRows.length === 0) {
+    return {
+      ok: true,
+      period: { startDate, endDate },
+      summary: {
+        totalRows: 0,
+        totalHospitals: 0,
+        totalParameters: 0,
+        totalAnalyzers: 0,
+        totalLots: 0,
+        sigmaDistribution: { worldClass: 0, excellent: 0, good: 0, marginal: 0, poor: 0, unacceptable: 0 },
+      },
+      rows: [],
+      msg: "Tidak ditemukan data QC pada filter yang dipilih",
+    };
+  }
+
+  // Ambil metadata instansi user
+  const users = await db.users.findMany({
+    where: { username: { in: selectedUsers } },
+    select: { username: true, fullName: true },
+  });
+  const kopList = await db.kopSurat.findMany({
+    where: { ownerUsername: { in: selectedUsers }, key: "namaRS" },
+    select: { ownerUsername: true, value: true },
+  });
+  const userMap = new Map<string, string>();
+  users.forEach((u) => userMap.set(u.username, u.fullName));
+  kopList.forEach((k) => {
+    if (k.value && k.value.trim()) userMap.set(k.ownerUsername, k.value.trim());
+  });
+
+  // Ambil daftar master TEa rujukan
+  const masterTeas = await db.daftarTEa.findMany();
+  const teaMap = new Map<string, number>();
+  masterTeas.forEach((t) => {
+    const aliases = getParameterAliases(t.parameter);
+    const val = parseNumSafe(t.nilaiTEa);
+    if (val !== null && val > 0) {
+      aliases.forEach((a) => teaMap.set(a.toUpperCase(), val));
+    }
+  });
+
+  // Ambil LotQC untuk user yang dipilih
+  const lotRows = await db.lotQC.findMany({
+    where: { ownerUsername: { in: selectedUsers } },
+  });
+
+  // Kelompokkan inputQC berdasarkan (ownerUsername, canonicalParam, namaAlat, noLot)
+  interface GroupBucket {
+    username: string;
+    hospitalName: string;
+    parameter: string;
+    namaAlat: string;
+    noLot: string;
+    l1Values: number[];
+    l2Values: number[];
+    l3Values: number[];
+    lotIDs: Set<string>;
+  }
+
+  const groups = new Map<string, GroupBucket>();
+
+  for (const r of inputRows) {
+    const rawParam = (r.parameter || "").trim();
+    const canonicalParam = aliasToCanonical.get(rawParam.toUpperCase()) || rawParam;
+    const alat = (r.namaAlat || "-").trim();
+    const lot = (r.noLot || "-").trim();
+    const key = `${r.ownerUsername}:::${canonicalParam.toUpperCase()}:::${alat}:::${lot}`;
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        username: r.ownerUsername,
+        hospitalName: userMap.get(r.ownerUsername) || r.ownerUsername,
+        parameter: canonicalParam,
+        namaAlat: alat,
+        noLot: lot,
+        l1Values: [],
+        l2Values: [],
+        l3Values: [],
+        lotIDs: new Set<string>(),
+      });
+    }
+
+    const g = groups.get(key)!;
+    if (r.lotID) g.lotIDs.add(r.lotID);
+
+    const v1 = parseNumSafe(r.level1);
+    if (v1 !== null && v1 !== 0) g.l1Values.push(v1);
+
+    const v2 = parseNumSafe(r.level2);
+    if (v2 !== null && v2 !== 0) g.l2Values.push(v2);
+
+    const v3 = parseNumSafe(r.level3);
+    if (v3 !== null && v3 !== 0) g.l3Values.push(v3);
+  }
+
+  // Helper evaluasi Sigma
+  function classifySigma(sigmaVal: number) {
+    if (sigmaVal >= 6.0) {
+      return { label: "World Class (Enam Sigma)", badgeClass: "badge-world-class", color: "#059669", rank: 6 };
+    } else if (sigmaVal >= 5.0) {
+      return { label: "Excellent", badgeClass: "badge-excellent", color: "#0284c7", rank: 5 };
+    } else if (sigmaVal >= 4.0) {
+      return { label: "Good", badgeClass: "badge-good", color: "#16a34a", rank: 4 };
+    } else if (sigmaVal >= 3.0) {
+      return { label: "Marginal", badgeClass: "badge-marginal", color: "#d97706", rank: 3 };
+    } else if (sigmaVal >= 2.0) {
+      return { label: "Poor", badgeClass: "badge-poor", color: "#ea580c", rank: 2 };
+    } else {
+      return { label: "Unacceptable", badgeClass: "badge-unacceptable", color: "#dc2626", rank: 1 };
+    }
+  }
+
+  const tableRows: any[] = [];
+  const uniqueHospitals = new Set<string>();
+  const uniqueParameters = new Set<string>();
+  const uniqueAnalyzers = new Set<string>();
+  const uniqueLots = new Set<string>();
+  const sigmaDistribution = {
+    worldClass: 0,
+    excellent: 0,
+    good: 0,
+    marginal: 0,
+    poor: 0,
+    unacceptable: 0,
+  };
+
+  // Iterasi setiap grup dan hitung statistik L1, L2, L3
+  for (const g of Array.from(groups.values())) {
+    // Cari referensi LotQC
+    let matchedLot = lotRows.find((l) => {
+      if (l.ownerUsername !== g.username) return false;
+      if (g.lotIDs.has(l.id)) return true;
+      if (g.noLot !== "-" && l.noLot === g.noLot) return true;
+      return false;
+    });
+
+    const teaDefault = teaMap.get(g.parameter.toUpperCase()) || 10.0;
+    const teaLot = matchedLot ? parseNumSafe(matchedLot.tea) : null;
+    const finalTEa = teaLot !== null && teaLot > 0 ? teaLot : teaDefault;
+
+    const levelConfigs = [
+      {
+        levelLabel: "Level 1",
+        levelKey: "L1",
+        vals: g.l1Values,
+        targetLot: matchedLot ? parseNumSafe(matchedLot.targetL1) || parseNumSafe(matchedLot.meanL1) : null,
+      },
+      {
+        levelLabel: "Level 2",
+        levelKey: "L2",
+        vals: g.l2Values,
+        targetLot: matchedLot ? parseNumSafe(matchedLot.targetL2) || parseNumSafe(matchedLot.meanL2) : null,
+      },
+      {
+        levelLabel: "Level 3",
+        levelKey: "L3",
+        vals: g.l3Values,
+        targetLot: matchedLot ? parseNumSafe(matchedLot.targetL3) || parseNumSafe(matchedLot.meanL3) : null,
+      },
+    ];
+
+    for (const lc of levelConfigs) {
+      if (lc.vals.length === 0) continue;
+
+      const n = lc.vals.length;
+      const sum = lc.vals.reduce((a, b) => a + b, 0);
+      const mean = sum / n;
+
+      let sd = 0;
+      if (n > 1) {
+        const variance = lc.vals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+        sd = Math.sqrt(variance);
+      }
+
+      const cv = mean > 0 ? (sd / mean) * 100 : 0;
+      const targetVal = lc.targetLot !== null && lc.targetLot > 0 ? lc.targetLot : mean;
+      const biasPct = targetVal > 0 ? ((mean - targetVal) / targetVal) * 100 : 0;
+      const te = Math.abs(biasPct) + 1.65 * cv;
+      const sigma = cv > 0 ? (finalTEa - Math.abs(biasPct)) / cv : 0;
+      const roundedSigma = Math.round(sigma * 100) / 100;
+      const classification = classifySigma(roundedSigma);
+
+      if (roundedSigma >= 6.0) sigmaDistribution.worldClass++;
+      else if (roundedSigma >= 5.0) sigmaDistribution.excellent++;
+      else if (roundedSigma >= 4.0) sigmaDistribution.good++;
+      else if (roundedSigma >= 3.0) sigmaDistribution.marginal++;
+      else if (roundedSigma >= 2.0) sigmaDistribution.poor++;
+      else sigmaDistribution.unacceptable++;
+
+      uniqueHospitals.add(g.username);
+      uniqueParameters.add(g.parameter);
+      if (g.namaAlat !== "-") uniqueAnalyzers.add(g.namaAlat);
+      if (g.noLot !== "-") uniqueLots.add(g.noLot);
+
+      tableRows.push({
+        id: `${g.username}_${g.parameter}_${g.namaAlat}_${g.noLot}_${lc.levelKey}`,
+        username: g.username,
+        hospitalName: g.hospitalName,
+        parameter: g.parameter,
+        namaAlat: g.namaAlat,
+        noLot: g.noLot,
+        level: lc.levelLabel,
+        levelKey: lc.levelKey,
+        n,
+        target: Math.round(targetVal * 1000) / 1000,
+        targetSource: lc.targetLot !== null && lc.targetLot > 0 ? "Lot QC" : "Rerata Internal",
+        mean: Math.round(mean * 1000) / 1000,
+        sd: Math.round(sd * 10000) / 10000,
+        cv: Math.round(cv * 100) / 100,
+        biasPct: Math.round(biasPct * 100) / 100,
+        tea: Math.round(finalTEa * 100) / 100,
+        te: Math.round(te * 100) / 100,
+        sigma: roundedSigma,
+        sigmaPerformance: classification,
+      });
+    }
+  }
+
+  // Urutkan baris: RS -> Parameter -> Alat -> Lot -> Level
+  tableRows.sort((a, b) => {
+    const c1 = a.hospitalName.localeCompare(b.hospitalName);
+    if (c1 !== 0) return c1;
+    const c2 = a.parameter.localeCompare(b.parameter);
+    if (c2 !== 0) return c2;
+    const c3 = a.namaAlat.localeCompare(b.namaAlat);
+    if (c3 !== 0) return c3;
+    const c4 = a.noLot.localeCompare(b.noLot);
+    if (c4 !== 0) return c4;
+    return a.levelKey.localeCompare(b.levelKey);
+  });
+
+  return {
+    ok: true,
+    period: { startDate, endDate },
+    summary: {
+      totalRows: tableRows.length,
+      totalHospitals: uniqueHospitals.size,
+      totalParameters: uniqueParameters.size,
+      totalAnalyzers: uniqueAnalyzers.size,
+      totalLots: uniqueLots.size,
+      sigmaDistribution,
+    },
+    rows: tableRows,
+  };
+}

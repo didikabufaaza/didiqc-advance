@@ -1896,8 +1896,15 @@ id="sbUserRole">user</div></div>
 <button class="nav-item" data-page="instrcompare" onclick="goPage('instrcompare')"><i class="fas fa-balance-scale"></i> <span>Instrument Compare</span></button>
 <button class="nav-item" data-page="tabulasi" onclick="goPage('tabulasi')"><i class="fas fa-table"></i> <span>Tabulasi Rekap</span></button>
 <button class="nav-item" data-page="opspecs" onclick="goPage('opspecs')"><i class="fas fa-bullseye"></i> <span>Analisis OPSpecs</span></button>
+</div>
+</div>
+<div class="nav-divider"></div>
+<div class="nav-group" id="grpIqcPgAnalisis" style="display:none">
+<button class="nav-group-toggle" onclick="toggleNavGroup('grpIqcPgAnalisis')"><i class="fas fa-network-wired"></i> <span>IQC PG Analisis</span> <i class="fas fa-chevron-down"></i></button>
+<div class="nav-submenu">
 <button class="nav-item" id="navPeerGroup" data-page="peergroup" onclick="goPage('peergroup')" style="display:none"><i class="fas fa-users-cog"></i> <span>Peer Group PME/PMI</span></button>
-<button class="nav-item" id="navPeerReports" data-page="peerreports" onclick="goPage('peerreports')"><i class="fas fa-file-medical"></i> <span>Laporan Analisa Peer Group</span></button>
+<button class="nav-item" id="navPgTabulasi" data-page="pgtabulasi" onclick="goPage('pgtabulasi')" style="display:none"><i class="fas fa-table-list"></i> <span>Tabulasi PG QC Analisis</span></button>
+<button class="nav-item" id="navPeerReports" data-page="peerreports" onclick="goPage('peerreports')" style="display:none"><i class="fas fa-file-medical"></i> <span>Laporan Analisa Peer Group</span></button>
 </div>
 </div>
 <div class="nav-divider"></div>
@@ -2616,6 +2623,212 @@ Kesimpulan</h3></div><div class="card-body" id="opsKesimpulan"></div></div>
     </div>
 
   </div>
+</div></div>
+</div>
+
+<!-- ===================== PAGE: TABULASI PG QC ANALISIS (SUPERADMIN) ===================== -->
+<div class="page" id="pagePgtabulasi">
+<div class="card"><div class="card-header">
+  <div>
+    <h3><i class="fas fa-table-list"></i> Tabulasi PG QC Analisis (Multi-Level &amp; Multi-Akun)</h3>
+    <div style="font-size:.82rem;color:var(--text-secondary)"><i class="fas fa-shield-alt"></i> Rekapitulasi Lengkap Statistik Kontrol Mutu Internal Seluruh Akun Laboratorium Terdaftar (Mean, SD, CV%, TE, TEa, Bias%, Sigma &amp; Kinerja Enam Sigma)</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+    <button class="btn btn-outline btn-sm" onclick="initPgTabulasiFilters()"><i class="fas fa-sync-alt"></i> Refresh Opsi</button>
+  </div>
+</div>
+<div class="card-body">
+
+  <!-- Filter Card -->
+  <div style="background:var(--bg-secondary);padding:14px;border-radius:10px;border:1px solid var(--border);margin-bottom:16px">
+    <div style="font-weight:700;font-size:.9rem;margin-bottom:12px;color:var(--primary);display:flex;align-items:center;gap:8px">
+      <i class="fas fa-filter"></i> Konfigurasi Filter Tabulasi Komprehensif
+    </div>
+
+    <!-- Baris 1: Rentang Tanggal -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid var(--border)">
+      <div style="font-weight:600;font-size:.85rem;color:var(--text-primary)"><i class="fas fa-calendar-alt"></i> Periode QC:</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:.8rem;color:var(--text-secondary)">Dari:</label>
+        <input type="date" id="pgTabStart" class="form-control" style="width:145px;padding:4px 8px;font-size:.85rem">
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:.8rem;color:var(--text-secondary)">Sampai:</label>
+        <input type="date" id="pgTabEnd" class="form-control" style="width:145px;padding:4px 8px;font-size:.85rem">
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button type="button" class="btn btn-xs btn-outline" onclick="setPgTabPreset('this_month')">Bulan Ini</button>
+        <button type="button" class="btn btn-xs btn-outline" onclick="setPgTabPreset('last_month')">Bulan Lalu</button>
+        <button type="button" class="btn btn-xs btn-outline" onclick="setPgTabPreset('last_3m')">3 Bulan Terakhir</button>
+        <button type="button" class="btn btn-xs btn-outline" onclick="setPgTabPreset('this_year')">Tahun Ini</button>
+      </div>
+    </div>
+
+    <!-- Baris 2: Grid 4 Kolom Checklist Filter (Parameter, Akun, Alat, Lot) -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:12px;margin-bottom:14px">
+      
+      <!-- Box 1: Parameter Pemeriksaan -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-primary)">
+            <i class="fas fa-vial"></i> Parameter (<span id="pgTabParamCount">0</span>)
+          </label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabParamList', true)">Semua</button>
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabParamList', false)">Hapus</button>
+          </div>
+        </div>
+        <input type="text" id="pgTabSearchParam" placeholder="Cari parameter..." oninput="filterPgTabList('pgTabParamList', this.value)" style="width:100%;padding:4px 8px;font-size:.8rem;border:1px solid var(--border);border-radius:4px;margin-bottom:6px">
+        <div id="pgTabParamList" style="max-height:160px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:4px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.8rem">
+          <span style="color:#94a3b8">Memuat daftar parameter...</span>
+        </div>
+      </div>
+
+      <!-- Box 2: Akun Laboratorium / Rumah Sakit Peserta -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-primary)">
+            <i class="fas fa-hospital"></i> Akun / Lab Peserta (<span id="pgTabHospCount">0</span>)
+          </label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabHospList', true)">Semua</button>
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabHospList', false)">Hapus</button>
+          </div>
+        </div>
+        <input type="text" id="pgTabSearchHosp" placeholder="Cari akun / RS..." oninput="filterPgTabList('pgTabHospList', this.value)" style="width:100%;padding:4px 8px;font-size:.8rem;border:1px solid var(--border);border-radius:4px;margin-bottom:6px">
+        <div id="pgTabHospList" style="max-height:160px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:4px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.8rem">
+          <span style="color:#94a3b8">Memuat daftar akun...</span>
+        </div>
+      </div>
+
+      <!-- Box 3: Nama Alat / Analyzer (Dipakai Saja) -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-primary)">
+            <i class="fas fa-microscope"></i> Nama Alat (<span id="pgTabAlatCount">0</span>)
+          </label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabAlatList', true)">Semua</button>
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabAlatList', false)">Hapus</button>
+          </div>
+        </div>
+        <input type="text" id="pgTabSearchAlat" placeholder="Cari alat..." oninput="filterPgTabList('pgTabAlatList', this.value)" style="width:100%;padding:4px 8px;font-size:.8rem;border:1px solid var(--border);border-radius:4px;margin-bottom:6px">
+        <div id="pgTabAlatList" style="max-height:160px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:4px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.8rem">
+          <span style="color:#94a3b8">Memuat alat terpakai...</span>
+        </div>
+      </div>
+
+      <!-- Box 4: No. Lot QC (Dipakai Saja) -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-primary)">
+            <i class="fas fa-barcode"></i> No. Lot QC (<span id="pgTabLotCount">0</span>)
+          </label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabLotList', true)">Semua</button>
+            <button type="button" class="btn btn-xs btn-light" onclick="toggleAllPgTabCheckboxes('pgTabLotList', false)">Hapus</button>
+          </div>
+        </div>
+        <input type="text" id="pgTabSearchLot" placeholder="Cari no. lot..." oninput="filterPgTabList('pgTabLotList', this.value)" style="width:100%;padding:4px 8px;font-size:.8rem;border:1px solid var(--border);border-radius:4px;margin-bottom:6px">
+        <div id="pgTabLotList" style="max-height:160px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:4px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.8rem">
+          <span style="color:#94a3b8">Memuat lot terpakai...</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tombol Eksekusi Filter -->
+    <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
+      <button class="btn btn-secondary btn-sm" onclick="resetPgTabulasiFilter()"><i class="fas fa-undo"></i> Reset Filter</button>
+      <button class="btn btn-primary btn-sm" onclick="runPgTabulasiAnalysis()"><i class="fas fa-play"></i> Jalankan Tabulasi PG QC</button>
+    </div>
+  </div>
+
+  <!-- Area Hasil Tabulasi -->
+  <div id="pgTabResultWrap" style="display:none">
+    
+    <!-- KPI Summary Bar -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;margin-bottom:14px">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:.75rem;color:#1e40af;font-weight:700;text-transform:uppercase">Total Baris Tabulasi</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#1e3a8a" id="pgTabKpiRows">0</div>
+        <div style="font-size:.7rem;color:#3b82f6">Multi-level data</div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:.75rem;color:#166534;font-weight:700;text-transform:uppercase">Akun / Lab Terlibat</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#14532d" id="pgTabKpiHosp">0</div>
+        <div style="font-size:.7rem;color:#22c55e">Fasyankes aktif</div>
+      </div>
+      <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:.75rem;color:#6b21a8;font-weight:700;text-transform:uppercase">Parameter Dievaluasi</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#581c87" id="pgTabKpiParam">0</div>
+        <div style="font-size:.7rem;color:#a855f7">Parameter klinis</div>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:.75rem;color:#92400e;font-weight:700;text-transform:uppercase">Alat / Analyzer</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#78350f" id="pgTabKpiAlat">0</div>
+        <div style="font-size:.7rem;color:#d97706">Alat operasional</div>
+      </div>
+      <div style="background:#fdf2f8;border:1px solid #fbcfe8;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:.75rem;color:#9d174d;font-weight:700;text-transform:uppercase">Nomor Lot QC</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#831843" id="pgTabKpiLot">0</div>
+        <div style="font-size:.7rem;color:#ec4899">Lot bahan kontrol</div>
+      </div>
+    </div>
+
+    <!-- Ringkasan Kinerja Enam Sigma Bar -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;font-weight:700;color:#334155">
+        <i class="fas fa-chart-pie"></i> Distribusi Kinerja Enam Sigma:
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:.75rem" id="pgTabSigmaDistBar">
+        <!-- Badge distribusi di-render otomatis -->
+      </div>
+    </div>
+
+    <!-- Toolbar Ekspor & Dokumen Formal -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;color:var(--text-secondary)">
+        <i class="fas fa-info-circle"></i> Geser tabel secara horizontal untuk melihat seluruh metrik statistik QC.
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="printPgTabulasiReport()"><i class="fas fa-print"></i> Cetak Tabulasi</button>
+        <button class="btn btn-outline btn-sm" onclick="pdfPgTabulasiReport()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+        <button class="btn btn-success btn-sm" onclick="exportPgTabulasiExcel()"><i class="fas fa-file-excel"></i> Export Excel (.xlsx)</button>
+      </div>
+    </div>
+
+    <!-- Tabel Tabulasi dengan Horizontal & Vertical Ruler -->
+    <div class="pg-table-scroll-wrap" id="pgTabWrapTable" style="border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+      <table style="min-width:1680px">
+        <thead>
+          <tr>
+            <th style="width:45px;text-align:center">No</th>
+            <th style="min-width:180px">Akun / Fasyankes</th>
+            <th style="min-width:130px">Parameter</th>
+            <th style="min-width:120px">Alat / Analyzer</th>
+            <th style="min-width:100px">No. Lot</th>
+            <th style="width:80px;text-align:center">Level</th>
+            <th style="width:60px;text-align:center">N</th>
+            <th style="width:90px;text-align:right">Target</th>
+            <th style="width:90px;text-align:right">Mean</th>
+            <th style="width:85px;text-align:right">SD</th>
+            <th style="width:80px;text-align:right">CV (%)</th>
+            <th style="width:80px;text-align:right">Bias (%)</th>
+            <th style="width:80px;text-align:right">TEa (%)</th>
+            <th style="width:80px;text-align:right">TE (%)</th>
+            <th style="width:85px;text-align:center">Sigma</th>
+            <th style="min-width:140px;text-align:center">Kinerja Sigma</th>
+          </tr>
+        </thead>
+        <tbody id="pgTabTableBody">
+          <!-- Diisi via renderPgTabulasiTable -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
 </div></div>
 </div>
 
@@ -4610,8 +4823,10 @@ var showSA=isSA&&!isSec; // fitur administrasi akun: hanya superadmin langsung
 G('navUsers').style.display=showSA?'':'none';
 G('navSettings').style.display=showSA?'':'none';
 G('viewAsWrap').style.display=showSA?'':'none';
+var giqc=G('grpIqcPgAnalisis'); if(giqc) giqc.style.display=showSA?'':'none';
 var npg=G('navPeerGroup'); if(npg) npg.style.display=showSA?'':'none';
-var npr=G('navPeerReports'); if(npr) npr.style.display='';
+var npt=G('navPgTabulasi'); if(npt) npt.style.display=showSA?'':'none';
+var npr=G('navPeerReports'); if(npr) npr.style.display=showSA?'':'none';
 var gmm=G('grpMultiMaster'); if(gmm) gmm.style.display=isSA?'':'none';
 var ib=G('btnImportDB'); if(ib) ib.style.display=showSA?'':'none';
 var oc=G('cardOnlineUsers'); if(oc) oc.style.display=showSA?'':'none';
@@ -4867,7 +5082,7 @@ sel.innerHTML = '<option value="">Semua</option>';
 (data || []).forEach(function(t) { sel.innerHTML += '<option value="' + escH(t) + '">' + escH(t) +'</option>'; });
 }).withFailureHandler(function(e){hl();toast('Error: '+(e.message||e||'Terjadikesalahan'),'error');}).getTahunSiklusList(getActiveUsername(), getActiveRole());
 }
-var SUBMENU_MAP={parameters:'grpDaftarParam',lotqc:'grpDaftarParam',biaspme:'grpDaftarParam',calcstats:'grpDaftarParam',sigmacvopt:'grpDaftarParam',daftartea:'grpDaftarParam',trendanalisis:'grpDashAnalisis',instrcompare:'grpDashAnalisis',tabulasi:'grpDashAnalisis',opspecs:'grpDashAnalisis',imghemato:'grpImageAnalysis',imgurin:'grpImageAnalysis',imgmalaria:'grpImageAnalysis',imgbta:'grpImageAnalysis',imgpatologi:'grpImageAnalysis',patdash:'grpImageAnalysis',patlap:'grpImageAnalysis',imglain:'grpImageAnalysis',eqdash:'grpEquipment',eqmaster:'grpEquipment',eqqr:'grpEquipment',eqmaintenance:'grpEquipment',eqcalibration:'grpEquipment',eqbreakdown:'grpEquipment',eqdocuments:'grpEquipment',eqcontracts:'grpEquipment',eqvendors:'grpEquipment',eqreagents:'grpEquipment',eqtraining:'grpEquipment',eqreports:'grpEquipment',masterparam:'grpMultiMaster',masteralat:'grpMultiMaster',mastermetode:'grpMultiMaster',mastersatuan:'grpMultiMaster',mastertea:'grpMultiMaster'};
+var SUBMENU_MAP={parameters:'grpDaftarParam',lotqc:'grpDaftarParam',biaspme:'grpDaftarParam',calcstats:'grpDaftarParam',sigmacvopt:'grpDaftarParam',daftartea:'grpDaftarParam',trendanalisis:'grpDashAnalisis',instrcompare:'grpDashAnalisis',tabulasi:'grpDashAnalisis',opspecs:'grpDashAnalisis',peergroup:'grpIqcPgAnalisis',pgtabulasi:'grpIqcPgAnalisis',peerreports:'grpIqcPgAnalisis',imghemato:'grpImageAnalysis',imgurin:'grpImageAnalysis',imgmalaria:'grpImageAnalysis',imgbta:'grpImageAnalysis',imgpatologi:'grpImageAnalysis',patdash:'grpImageAnalysis',patlap:'grpImageAnalysis',imglain:'grpImageAnalysis',eqdash:'grpEquipment',eqmaster:'grpEquipment',eqqr:'grpEquipment',eqmaintenance:'grpEquipment',eqcalibration:'grpEquipment',eqbreakdown:'grpEquipment',eqdocuments:'grpEquipment',eqcontracts:'grpEquipment',eqvendors:'grpEquipment',eqreagents:'grpEquipment',eqtraining:'grpEquipment',eqreports:'grpEquipment',masterparam:'grpMultiMaster',masteralat:'grpMultiMaster',mastermetode:'grpMultiMaster',mastersatuan:'grpMultiMaster',mastertea:'grpMultiMaster'};
 
 function goPage(page){
   try {
@@ -4877,6 +5092,11 @@ try{clearPageContent(CP);}catch(e){console.warn('clearPageContent error:',e);}
 // 🆕 v9.30: akun password tambahan (tenant) = akses menu & data akun induk,
 // KECUALI area administrasi akun: menu Users & menu Pengaturan.
 if(CU&&CU.isSecondary&&(page==='users'||page==='settings')){toast('Menu ini hanya dapat diakses akun superadmin langsung','warning');return;}
+// Menu IQC PG Analisis hanya dapat diakses oleh superadmin langsung
+if((page==='peergroup'||page==='pgtabulasi'||page==='peerreports')&&(!CU||CU.role!=='superadmin'||CU.isSecondary)){
+  toast('Menu IQC PG Analisis hanya dapat diakses oleh akun Superadmin langsung','warning');
+  return;
+}
 // 🆕 v9.31: password tambahan dengan ceklis hak akses — halaman di luar grup
 // yang diizinkan ditolak (menu lain disembunyikan dari sidebar sekaligus).
 if(CU&&CU.isSecondary&&String(CU.accessMenu||'').trim()){
@@ -4892,7 +5112,7 @@ if(CP==='hapusdata'&&page!=='hapusdata'){hapusUnlocked=false;G('hapusGate').styl
    var pageEl=G('page'+page.charAt(0).toUpperCase()+page.slice(1));if(pageEl)pageEl.classList.add('active');
    QA('.nav-item').forEach(function(n){n.classList.remove('active');});QA('.nav-item[data-page="'+page+'"]').forEach(function(n){n.classList.add('active');});
    var parentGroup=SUBMENU_MAP[page];if(parentGroup){var grpEl=G(parentGroup);if(grpEl&&!grpEl.classList.contains('open'))grpEl.classList.add('open');}
-   var titles={dashboard:'Dashboard',parameters:'Parameter',lotqc:'Lot QC',inputqc:'InputQC',grafik:'Grafik & Analisis',laporan:'Laporan',trendanalisis:'TrendAnalisis',instrcompare:'Instrument Compare',tabulasi:'Tabulasi Rekap',opspecs:'AnalisisOPSpecs',validasi:'Validasi QC',histori:'Histori QC',daftartea:'Daftar TEa',biaspme:'BiasPME',calcstats:'Calc Stats',sigmacvopt:'% Sigma CV',smartimport:'Smart Import',hapusdata:'HapusData',users:'Users',kopsurat:'Kop Surat',settings:'Pengaturan',logactivity:'LogAktivitas',imghemato:'Hematologi Sel',imgurin:'UrinSedimen',imgmalaria:'Malaria',imgbta:'BTA',imgpatologi:'Patologi Anatomi',patdash:'Dashboard PA',patlap:'Laporan PA',imglain:'Analisis Lain',eqdash:'Dashboard Equipment',eqmaster:'Master Equipment',eqqr:'QR Management',eqmaintenance:'Maintenance',eqcalibration:'Calibration',eqbreakdown:'Breakdown',eqdocuments:'Documents',eqcontracts:'Contracts',eqvendors:'Vendors',eqreagents:'Reagents',eqtraining:'Training',eqreports:'Reports',masterparam:'Master Parameter',masteralat:'Master Alat',mastermetode:'Master Metode',mastersatuan:'Master Satuan',mastertea:'Master TEa'};
+   var titles={dashboard:'Dashboard',parameters:'Parameter',lotqc:'Lot QC',inputqc:'InputQC',grafik:'Grafik & Analisis',laporan:'Laporan',trendanalisis:'TrendAnalisis',instrcompare:'Instrument Compare',tabulasi:'Tabulasi Rekap',opspecs:'AnalisisOPSpecs',peergroup:'Peer Group PME/PMI',pgtabulasi:'Tabulasi PG QC Analisis',peerreports:'Laporan Analisa Peer Group',validasi:'Validasi QC',histori:'Histori QC',daftartea:'Daftar TEa',biaspme:'BiasPME',calcstats:'Calc Stats',sigmacvopt:'% Sigma CV',smartimport:'Smart Import',hapusdata:'HapusData',users:'Users',kopsurat:'Kop Surat',settings:'Pengaturan',logactivity:'LogAktivitas',imghemato:'Hematologi Sel',imgurin:'UrinSedimen',imgmalaria:'Malaria',imgbta:'BTA',imgpatologi:'Patologi Anatomi',patdash:'Dashboard PA',patlap:'Laporan PA',imglain:'Analisis Lain',eqdash:'Dashboard Equipment',eqmaster:'Master Equipment',eqqr:'QR Management',eqmaintenance:'Maintenance',eqcalibration:'Calibration',eqbreakdown:'Breakdown',eqdocuments:'Documents',eqcontracts:'Contracts',eqvendors:'Vendors',eqreagents:'Reagents',eqtraining:'Training',eqreports:'Reports',masterparam:'Master Parameter',masteralat:'Master Alat',mastermetode:'Master Metode',mastersatuan:'Master Satuan',mastertea:'Master TEa'};
 
 G('topbarTitle').textContent=titles[page]||page;try{applyLang(getCurrentLang());}catch(e){}if(window.innerWidth<=768)closeMobileSidebar();try{loadCurrentPage();}catch(e){console.error('loadCurrentPage error for '+page+':',e);toast('Gagal memuat halaman: '+(e.message||e),'error');hl();}
   } catch(e){console.error('goPage error:',e);hl();}
@@ -5032,7 +5252,8 @@ case 'eqtraining':var etrb=G('eqTrnBody'); if(etrb) etrb.innerHTML='';
    break;
 case 'eqreports':['eqRepBrandChart','eqRepLocChart','eqRepPicChart','eqRepMaintTypeChart'].forEach(function(id){destroyChart(id);});var ers=G('eqReportStats'); if(ers) ers.innerHTML='';
    break;
-case 'peergroup':['chartPgDistribution','chartPgZScore'].forEach(function(id){destroyChart(id);});break;
+case 'peergroup':['chartPgDistribution','chartPgZScore','chartPgLeveyJennings'].forEach(function(id){destroyChart(id);});break;
+case 'pgtabulasi':var ptb=G('pgTabTableBody'); if(ptb) ptb.innerHTML='';break;
 case 'peerreports':var prb=G('peerReportsTableBody'); if(prb) prb.innerHTML='';break;
 case 'smartimport':if(G('importPreview')){G('importPreview').innerHTML='';G('importPreview').style.display='none';}
           if(G('btnImportSubmit')) G('btnImportSubmit').style.display='none';
@@ -5070,6 +5291,7 @@ case 'imghemato':case 'imgurin':case 'imgmalaria':case 'imgbta':case'imglain':ld
    case 'mastersatuan':renderMasterSatuanTable();break;
    case 'mastertea':renderMasterTeaTable();break;
    case 'peergroup':loadPeerGroupPage();break;
+   case 'pgtabulasi':loadPgTabulasiPage();break;
    case 'peerreports':loadPeerReportsPage();break;
 }
 }
@@ -11079,6 +11301,582 @@ function printModalPeerReport(){
 
 function pdfModalPeerReport(){
   printModalPeerReport();
+}
+
+// ============================================================
+// MODUL: TABULASI PG QC ANALISIS (SUPERADMIN)
+// ============================================================
+
+var pgTabFilterCache = null;
+var lastPgTabulasiResult = null;
+
+function loadPgTabulasiPage(){
+  if(!CU || CU.role !== 'superadmin' || CU.isSecondary){
+    toast('Menu ini khusus untuk Superadmin', 'warning');
+    goPage('dashboard');
+    return;
+  }
+  initPgTabulasiFilters();
+}
+
+function initPgTabulasiFilters(){
+  // Pasang default tanggal: bulan berjalan
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var firstDay = y + '-' + m + '-01';
+  var curDay = y + '-' + m + '-' + d;
+
+  var sEl = G('pgTabStart');
+  var eEl = G('pgTabEnd');
+  if(sEl && !sEl.value) sEl.value = firstDay;
+  if(eEl && !eEl.value) eEl.value = curDay;
+
+  sl('Memuat opsi filter tabulasi PG QC...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Gagal memuat opsi filter tabulasi', 'error');
+        return;
+      }
+      pgTabFilterCache = res;
+      renderPgTabChecklists(res);
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error memuat filter tabulasi: ' + (err.message || err), 'error');
+    })
+    .getPgTabulasiFilterOptions();
+}
+
+function renderPgTabChecklists(data){
+  // 1. Parameter
+  var pCont = G('pgTabParamList');
+  var params = data.parameters || [];
+  if(pCont){
+    if(params.length === 0){
+      pCont.innerHTML = '<span style="color:#94a3b8">Tidak ada parameter di Input QC</span>';
+    } else {
+      var pHtml = '';
+      params.forEach(function(p, i){
+        pHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:1px 0">' +
+          '<input type="checkbox" value="' + escH(p) + '" checked onchange="updatePgTabCounter(\'pgTabParamList\',\'pgTabParamCount\')"> ' +
+          '<span>' + escH(p) + '</span>' +
+        '</label>';
+      });
+      pCont.innerHTML = pHtml;
+    }
+    updatePgTabCounter('pgTabParamList', 'pgTabParamCount');
+  }
+
+  // 2. Akun / Rumah Sakit Peserta
+  var hCont = G('pgTabHospList');
+  var hosps = data.hospitals || [];
+  if(hCont){
+    if(hosps.length === 0){
+      hCont.innerHTML = '<span style="color:#94a3b8">Tidak ada akun peserta</span>';
+    } else {
+      var hHtml = '';
+      hosps.forEach(function(h, i){
+        var labelStr = h.hospitalName ? (h.hospitalName + ' (@' + h.username + ')') : ('@' + h.username);
+        hHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:1px 0" title="@' + escH(h.username) + '">' +
+          '<input type="checkbox" value="' + escH(h.username) + '" checked onchange="updatePgTabCounter(\'pgTabHospList\',\'pgTabHospCount\')"> ' +
+          '<span>' + escH(labelStr) + '</span>' +
+        '</label>';
+      });
+      hCont.innerHTML = hHtml;
+    }
+    updatePgTabCounter('pgTabHospList', 'pgTabHospCount');
+  }
+
+  // 3. Nama Alat (Hanya yang dipakai)
+  var aCont = G('pgTabAlatList');
+  var alats = data.analyzers || [];
+  if(aCont){
+    if(alats.length === 0){
+      aCont.innerHTML = '<span style="color:#94a3b8">Belum ada alat digunakan</span>';
+    } else {
+      var aHtml = '';
+      alats.forEach(function(a, i){
+        aHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:1px 0">' +
+          '<input type="checkbox" value="' + escH(a) + '" checked onchange="updatePgTabCounter(\'pgTabAlatList\',\'pgTabAlatCount\')"> ' +
+          '<span>' + escH(a) + '</span>' +
+        '</label>';
+      });
+      aCont.innerHTML = aHtml;
+    }
+    updatePgTabCounter('pgTabAlatList', 'pgTabAlatCount');
+  }
+
+  // 4. Nomor Lot QC (Hanya yang dipakai)
+  var lCont = G('pgTabLotList');
+  var lots = data.lots || [];
+  if(lCont){
+    if(lots.length === 0){
+      lCont.innerHTML = '<span style="color:#94a3b8">Belum ada lot QC digunakan</span>';
+    } else {
+      var lHtml = '';
+      lots.forEach(function(l, i){
+        lHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:1px 0">' +
+          '<input type="checkbox" value="' + escH(l) + '" checked onchange="updatePgTabCounter(\'pgTabLotList\',\'pgTabLotCount\')"> ' +
+          '<span>' + escH(l) + '</span>' +
+        '</label>';
+      });
+      lCont.innerHTML = lHtml;
+    }
+    updatePgTabCounter('pgTabLotList', 'pgTabLotCount');
+  }
+}
+
+function setPgTabPreset(type){
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = now.getMonth();
+  var sDate, eDate;
+
+  if(type === 'this_month'){
+    sDate = new Date(y, m, 1);
+    eDate = new Date(y, m + 1, 0);
+  } else if(type === 'last_month'){
+    sDate = new Date(y, m - 1, 1);
+    eDate = new Date(y, m, 0);
+  } else if(type === 'last_3m'){
+    sDate = new Date(y, m - 2, 1);
+    eDate = new Date(y, m + 1, 0);
+  } else if(type === 'this_year'){
+    sDate = new Date(y, 0, 1);
+    eDate = new Date(y, 11, 31);
+  }
+
+  function fmtYMD(d){
+    var yy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return yy + '-' + mm + '-' + dd;
+  }
+
+  if(sDate && eDate){
+    if(G('pgTabStart')) G('pgTabStart').value = fmtYMD(sDate);
+    if(G('pgTabEnd')) G('pgTabEnd').value = fmtYMD(eDate);
+  }
+}
+
+function toggleAllPgTabCheckboxes(containerId, check){
+  var cont = G(containerId);
+  if(!cont) return;
+  var boxes = cont.querySelectorAll('input[type="checkbox"]');
+  boxes.forEach(function(cb){
+    // Hanya centang yang terlihat (tidak difilter)
+    if(cb.parentElement && cb.parentElement.style.display !== 'none'){
+      cb.checked = check;
+    }
+  });
+
+  if(containerId === 'pgTabParamList') updatePgTabCounter('pgTabParamList', 'pgTabParamCount');
+  else if(containerId === 'pgTabHospList') updatePgTabCounter('pgTabHospList', 'pgTabHospCount');
+  else if(containerId === 'pgTabAlatList') updatePgTabCounter('pgTabAlatList', 'pgTabAlatCount');
+  else if(containerId === 'pgTabLotList') updatePgTabCounter('pgTabLotList', 'pgTabLotCount');
+}
+
+function filterPgTabList(containerId, query){
+  var cont = G(containerId);
+  if(!cont) return;
+  var q = (query || '').toLowerCase().trim();
+  var labels = cont.querySelectorAll('label');
+  labels.forEach(function(lbl){
+    var text = lbl.textContent.toLowerCase();
+    if(!q || text.indexOf(q) >= 0){
+      lbl.style.display = 'flex';
+    } else {
+      lbl.style.display = 'none';
+    }
+  });
+}
+
+function updatePgTabCounter(containerId, counterId){
+  var cont = G(containerId);
+  var badge = G(counterId);
+  if(!cont || !badge) return;
+  var checked = cont.querySelectorAll('input[type="checkbox"]:checked').length;
+  badge.textContent = checked;
+}
+
+function resetPgTabulasiFilter(){
+  setPgTabPreset('this_month');
+  toggleAllPgTabCheckboxes('pgTabParamList', true);
+  toggleAllPgTabCheckboxes('pgTabHospList', true);
+  toggleAllPgTabCheckboxes('pgTabAlatList', true);
+  toggleAllPgTabCheckboxes('pgTabLotList', true);
+  if(G('pgTabSearchParam')) G('pgTabSearchParam').value = '';
+  if(G('pgTabSearchHosp')) G('pgTabSearchHosp').value = '';
+  if(G('pgTabSearchAlat')) G('pgTabSearchAlat').value = '';
+  if(G('pgTabSearchLot')) G('pgTabSearchLot').value = '';
+  filterPgTabList('pgTabParamList', '');
+  filterPgTabList('pgTabHospList', '');
+  filterPgTabList('pgTabAlatList', '');
+  filterPgTabList('pgTabLotList', '');
+  if(G('pgTabResultWrap')) G('pgTabResultWrap').style.display = 'none';
+  toast('Filter tabulasi direset', 'info');
+}
+
+function runPgTabulasiAnalysis(){
+  var startDate = G('pgTabStart') ? G('pgTabStart').value : '';
+  var endDate = G('pgTabEnd') ? G('pgTabEnd').value : '';
+
+  if(!startDate || !endDate){
+    toast('Rentang tanggal evaluasi wajib diisi', 'warning');
+    return;
+  }
+
+  // Ambil parameter yang dicentang
+  var paramBoxes = QA('#pgTabParamList input[type="checkbox"]:checked');
+  var selectedParams = [];
+  paramBoxes.forEach(function(cb){ selectedParams.push(cb.value); });
+  if(selectedParams.length === 0){
+    toast('Pilih minimal satu parameter pemeriksaan', 'warning');
+    return;
+  }
+
+  // Ambil akun yang dicentang
+  var hospBoxes = QA('#pgTabHospList input[type="checkbox"]:checked');
+  var selectedUsers = [];
+  hospBoxes.forEach(function(cb){ selectedUsers.push(cb.value); });
+  if(selectedUsers.length === 0){
+    toast('Pilih minimal satu akun fasyankes/laboratorium peserta', 'warning');
+    return;
+  }
+
+  // Ambil alat yang dicentang
+  var alatBoxes = QA('#pgTabAlatList input[type="checkbox"]:checked');
+  var selectedAnalyzers = [];
+  alatBoxes.forEach(function(cb){ selectedAnalyzers.push(cb.value); });
+
+  // Ambil lot yang dicentang
+  var lotBoxes = QA('#pgTabLotList input[type="checkbox"]:checked');
+  var selectedLots = [];
+  lotBoxes.forEach(function(cb){ selectedLots.push(cb.value); });
+
+  var payload = {
+    startDate: startDate,
+    endDate: endDate,
+    usernames: selectedUsers,
+    parameters: selectedParams,
+    analyzers: selectedAnalyzers,
+    lots: selectedLots,
+  };
+
+  sl('Menjalankan kalkulasi rekapitulasi tabulasi PG QC...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      hl();
+      if(!res || !res.ok){
+        toast((res && res.msg) || 'Gagal menjalankan analisis tabulasi PG QC', 'error');
+        return;
+      }
+      lastPgTabulasiResult = res;
+      renderPgTabulasiTable(res);
+      toast('Tabulasi PG QC berhasil dianalisis: ' + res.summary.totalRows + ' baris', 'success');
+    })
+    .withFailureHandler(function(err){
+      hl();
+      toast('Error analisis tabulasi: ' + (err.message || err), 'error');
+    })
+    .runPgTabulasiAnalysis(payload);
+}
+
+function renderPgTabulasiTable(res){
+  var wrap = G('pgTabResultWrap');
+  if(wrap) wrap.style.display = '';
+
+  var s = res.summary || {};
+  if(G('pgTabKpiRows')) G('pgTabKpiRows').textContent = s.totalRows || 0;
+  if(G('pgTabKpiHosp')) G('pgTabKpiHosp').textContent = s.totalHospitals || 0;
+  if(G('pgTabKpiParam')) G('pgTabKpiParam').textContent = s.totalParameters || 0;
+  if(G('pgTabKpiAlat')) G('pgTabKpiAlat').textContent = s.totalAnalyzers || 0;
+  if(G('pgTabKpiLot')) G('pgTabKpiLot').textContent = s.totalLots || 0;
+
+  // Render Distribusi Sigma
+  var dist = s.sigmaDistribution || {};
+  var dBar = G('pgTabSigmaDistBar');
+  if(dBar){
+    dBar.innerHTML = '<span class="badge" style="background:#059669;color:#fff;font-weight:700">★ World Class (≥6σ): ' + (dist.worldClass || 0) + '</span> ' +
+      '<span class="badge" style="background:#0284c7;color:#fff;font-weight:700">Excellent (5-6σ): ' + (dist.excellent || 0) + '</span> ' +
+      '<span class="badge" style="background:#16a34a;color:#fff;font-weight:700">Good (4-5σ): ' + (dist.good || 0) + '</span> ' +
+      '<span class="badge" style="background:#d97706;color:#fff;font-weight:700">Marginal (3-4σ): ' + (dist.marginal || 0) + '</span> ' +
+      '<span class="badge" style="background:#ea580c;color:#fff;font-weight:700">Poor (2-3σ): ' + (dist.poor || 0) + '</span> ' +
+      '<span class="badge" style="background:#dc2626;color:#fff;font-weight:700">Unacceptable (&lt;2σ): ' + (dist.unacceptable || 0) + '</span>';
+  }
+
+  var tb = G('pgTabTableBody');
+  if(!tb) return;
+
+  var rows = res.rows || [];
+  if(rows.length === 0){
+    tb.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:30px;color:#94a3b8"><i class="fas fa-inbox fa-2x"></i><br>Tidak ditemukan data QC sesuai filter yang dipilih.</td></tr>';
+    return;
+  }
+
+  var html = '';
+  rows.forEach(function(r, idx){
+    var lvlBadge = r.levelKey === 'L1'
+      ? '<span class="badge" style="background:#dbeafe;color:#1e40af;font-weight:700">Level 1</span>'
+      : (r.levelKey === 'L2'
+        ? '<span class="badge" style="background:#dcfce7;color:#166534;font-weight:700">Level 2</span>'
+        : '<span class="badge" style="background:#ffedd5;color:#9a3412;font-weight:700">Level 3</span>');
+
+    var sigPerf = r.sigmaPerformance || {};
+    var perfBadge = '<span class="badge" style="background:' + (sigPerf.color || '#64748b') + ';color:#fff;font-weight:700;padding:3px 8px;border-radius:4px">' +
+      escH(sigPerf.label || '-') +
+    '</span>';
+
+    var biasStr = (r.biasPct >= 0 ? '+' : '') + r.biasPct.toFixed(2) + '%';
+    var sigStr = '<strong>' + r.sigma.toFixed(2) + ' σ</strong>';
+
+    html += '<tr>' +
+      '<td style="text-align:center">' + (idx + 1) + '</td>' +
+      '<td><strong>' + escH(r.hospitalName) + '</strong><br><small style="color:#64748b">@' + escH(r.username) + '</small></td>' +
+      '<td><strong>' + escH(r.parameter) + '</strong></td>' +
+      '<td>' + escH(r.namaAlat) + '</td>' +
+      '<td><code>' + escH(r.noLot) + '</code></td>' +
+      '<td style="text-align:center">' + lvlBadge + '</td>' +
+      '<td style="text-align:center"><strong>' + r.n + '</strong></td>' +
+      '<td style="text-align:right">' + r.target.toFixed(2) + '</td>' +
+      '<td style="text-align:right"><strong>' + r.mean.toFixed(2) + '</strong></td>' +
+      '<td style="text-align:right">' + r.sd.toFixed(3) + '</td>' +
+      '<td style="text-align:right">' + r.cv.toFixed(2) + '%</td>' +
+      '<td style="text-align:right">' + biasStr + '</td>' +
+      '<td style="text-align:right">' + r.tea.toFixed(1) + '%</td>' +
+      '<td style="text-align:right"><strong>' + r.te.toFixed(2) + '%</strong></td>' +
+      '<td style="text-align:center">' + sigStr + '</td>' +
+      '<td style="text-align:center">' + perfBadge + '</td>' +
+    '</tr>';
+  });
+
+  tb.innerHTML = html;
+}
+
+function exportPgTabulasiExcel(){
+  if(!lastPgTabulasiResult || !lastPgTabulasiResult.rows || lastPgTabulasiResult.rows.length === 0){
+    toast('Belum ada data hasil analisis tabulasi untuk diexport', 'warning');
+    return;
+  }
+  if(typeof XLSX === 'undefined'){
+    toast('Library SheetJS (XLSX) tidak tersedia', 'error');
+    return;
+  }
+
+  var res = lastPgTabulasiResult;
+  var rows = res.rows;
+  var period = res.period || {};
+  var s = res.summary || {};
+
+  var wb = XLSX.utils.book_new();
+
+  // Sheet 1: Tabulasi Lengkap
+  var exportData = rows.map(function(r, idx){
+    return {
+      'No': idx + 1,
+      'Laboratorium / RS': r.hospitalName,
+      'Username Akun': r.username,
+      'Parameter': r.parameter,
+      'Alat / Analyzer': r.namaAlat,
+      'No. Lot QC': r.noLot,
+      'Level QC': r.level,
+      'N (Jumlah Data)': r.n,
+      'Target / Rujukan': r.target,
+      'Sumber Target': r.targetSource,
+      'Mean': r.mean,
+      'SD': r.sd,
+      'CV (%)': r.cv,
+      'Bias (%)': r.biasPct,
+      'TEa (%)': r.tea,
+      'Total Error (TE %)': r.te,
+      'Sigma Metrik': r.sigma,
+      'Kinerja Enam Sigma': (r.sigmaPerformance && r.sigmaPerformance.label) || '-',
+    };
+  });
+
+  var ws1 = XLSX.utils.json_to_sheet(exportData);
+  ws1['!cols'] = [
+    { wch: 5 },  // No
+    { wch: 28 }, // RS
+    { wch: 18 }, // User
+    { wch: 20 }, // Param
+    { wch: 18 }, // Alat
+    { wch: 14 }, // Lot
+    { wch: 10 }, // Level
+    { wch: 8 },  // N
+    { wch: 12 }, // Target
+    { wch: 16 }, // Sumber Target
+    { wch: 12 }, // Mean
+    { wch: 10 }, // SD
+    { wch: 10 }, // CV
+    { wch: 10 }, // Bias
+    { wch: 10 }, // TEa
+    { wch: 12 }, // TE
+    { wch: 12 }, // Sigma
+    { wch: 24 }, // Kinerja
+  ];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Tabulasi_Statistik_QC');
+
+  // Sheet 2: Ringkasan & Filter
+  var summaryAoa = [
+    ['REKAPITULASI TABULASI HASIL STATISTIK KONTROL MUTU INTERNAL (IQC PG ANALISIS)'],
+    ['Periode Evaluasi', (period.startDate || '') + ' s/d ' + (period.endDate || '')],
+    ['Tanggal Export', new Date().toLocaleString('id-ID')],
+    ['Diekspor Oleh', (CU ? CU.fullName : 'Superadmin') + ' (@' + (CU ? CU.username : 'admin') + ')'],
+    [''],
+    ['RINGKASAN REKAPITULASI', 'NILAI'],
+    ['Total Baris Tabulasi', s.totalRows || 0],
+    ['Total Laboratorium / Akun', s.totalHospitals || 0],
+    ['Total Parameter Diuji', s.totalParameters || 0],
+    ['Total Alat / Analyzer', s.totalAnalyzers || 0],
+    ['Total Lot Kontrol', s.totalLots || 0],
+    [''],
+    ['DISTRIBUSI KINERJA ENAM SIGMA', 'JUMLAH LEVEL QC'],
+    ['World Class (≥ 6.0 σ)', (s.sigmaDistribution && s.sigmaDistribution.worldClass) || 0],
+    ['Excellent (5.0 - 5.9 σ)', (s.sigmaDistribution && s.sigmaDistribution.excellent) || 0],
+    ['Good (4.0 - 4.9 σ)', (s.sigmaDistribution && s.sigmaDistribution.good) || 0],
+    ['Marginal (3.0 - 3.9 σ)', (s.sigmaDistribution && s.sigmaDistribution.marginal) || 0],
+    ['Poor (2.0 - 2.9 σ)', (s.sigmaDistribution && s.sigmaDistribution.poor) || 0],
+    ['Unacceptable (< 2.0 σ)', (s.sigmaDistribution && s.sigmaDistribution.unacceptable) || 0],
+  ];
+  var ws2 = XLSX.utils.aoa_to_sheet(summaryAoa);
+  ws2['!cols'] = [{ wch: 35 }, { wch: 25 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan_Evaluasi');
+
+  var fName = 'Tabulasi_PG_QC_Analisis_' + (period.startDate || 'start') + '_' + (period.endDate || 'end') + '.xlsx';
+  XLSX.writeFile(wb, fName);
+  toast('File Excel tabulasi berhasil diunduh: ' + fName, 'success');
+}
+
+function printPgTabulasiReport(){
+  if(!lastPgTabulasiResult || !lastPgTabulasiResult.rows || lastPgTabulasiResult.rows.length === 0){
+    toast('Belum ada data tabulasi untuk dicetak', 'warning');
+    return;
+  }
+
+  var res = lastPgTabulasiResult;
+  var rows = res.rows;
+  var period = res.period || {};
+  var s = res.summary || {};
+
+  var kopHtml = (typeof buildKopHTML === 'function') ? buildKopHTML(CD.kop, true) : '';
+
+  var printWin = window.open('', '_blank');
+  if(!printWin){
+    toast('Popup blocker aktif, mohon izinkan popup untuk mencetak', 'error');
+    return;
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>Laporan Tabulasi PG QC Analisis</title>' +
+    '<style>' +
+      '@page { size: landscape; margin: 10mm; }' +
+      'body { font-family: Arial, sans-serif; font-size: 10px; color: #1e293b; margin: 0; padding: 10px; }' +
+      '.kop { margin-bottom: 12px; }' +
+      'h2, h3, h4 { margin: 3px 0; text-align: center; }' +
+      'table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 12px; font-size: 9.5px; }' +
+      'th, td { border: 1px solid #475569; padding: 4px 6px; text-align: left; }' +
+      'th { background: #f1f5f9; font-weight: bold; text-align: center; }' +
+      '.text-center { text-align: center; }' +
+      '.text-right { text-align: right; }' +
+      '.badge-perf { display: inline-block; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-size: 8.5px; color: #fff; }' +
+      '.meta-table { width: 100%; margin-bottom: 10px; font-size: 10px; border: 1px solid #cbd5e1; }' +
+      '.meta-table td { border: none; padding: 3px 6px; }' +
+      '.sign-box { display: table; width: 100%; margin-top: 30px; page-break-inside: avoid; }' +
+      '.sign-col { display: table-cell; width: 50%; text-align: center; font-size: 10.5px; }' +
+    '</style></head><body>';
+
+  html += '<div class="kop">' + kopHtml + '</div>';
+  html += '<h2>REKAPITULASI TABULASI HASIL STATISTIK KONTROL MUTU INTERNAL (IQC)</h2>';
+  html += '<div style="text-align:center;font-size:10px;color:#64748b;margin-bottom:12px">Analisis Multi-Level QC (L1, L2, L3) dan Multi-Akun Laboratorium Peserta</div>';
+
+  html += '<table class="meta-table">' +
+    '<tr>' +
+      '<td style="width:20%"><strong>Periode Evaluasi:</strong> ' + escH(period.startDate) + ' s/d ' + escH(period.endDate) + '</td>' +
+      '<td style="width:20%"><strong>Total Baris Data:</strong> ' + s.totalRows + '</td>' +
+      '<td style="width:20%"><strong>Laboratorium Terlibat:</strong> ' + s.totalHospitals + '</td>' +
+      '<td style="width:20%"><strong>Parameter Diuji:</strong> ' + s.totalParameters + '</td>' +
+      '<td style="width:20%"><strong>Dicetak:</strong> ' + new Date().toLocaleString('id-ID') + '</td>' +
+    '</tr>' +
+  '</table>';
+
+  html += '<table><thead><tr>' +
+    '<th style="width:30px">No</th>' +
+    '<th>Laboratorium / Fasyankes</th>' +
+    '<th>Parameter</th>' +
+    '<th>Alat / Analyzer</th>' +
+    '<th>No. Lot</th>' +
+    '<th style="width:50px">Level</th>' +
+    '<th style="width:35px">N</th>' +
+    '<th style="width:60px">Target</th>' +
+    '<th style="width:60px">Mean</th>' +
+    '<th style="width:55px">SD</th>' +
+    '<th style="width:50px">CV%</th>' +
+    '<th style="width:55px">Bias%</th>' +
+    '<th style="width:45px">TEa%</th>' +
+    '<th style="width:50px">TE%</th>' +
+    '<th style="width:55px">Sigma</th>' +
+    '<th>Kinerja Enam Sigma</th>' +
+  '</tr></thead><tbody>';
+
+  rows.forEach(function(r, idx){
+    var sigColor = (r.sigmaPerformance && r.sigmaPerformance.color) || '#334155';
+    var sigLabel = (r.sigmaPerformance && r.sigmaPerformance.label) || '-';
+    var biasStr = (r.biasPct >= 0 ? '+' : '') + r.biasPct.toFixed(2) + '%';
+
+    html += '<tr>' +
+      '<td class="text-center">' + (idx + 1) + '</td>' +
+      '<td><strong>' + escH(r.hospitalName) + '</strong> (' + escH(r.username) + ')</td>' +
+      '<td>' + escH(r.parameter) + '</td>' +
+      '<td>' + escH(r.namaAlat) + '</td>' +
+      '<td>' + escH(r.noLot) + '</td>' +
+      '<td class="text-center"><strong>' + escH(r.levelKey) + '</strong></td>' +
+      '<td class="text-center">' + r.n + '</td>' +
+      '<td class="text-right">' + r.target.toFixed(2) + '</td>' +
+      '<td class="text-right"><strong>' + r.mean.toFixed(2) + '</strong></td>' +
+      '<td class="text-right">' + r.sd.toFixed(3) + '</td>' +
+      '<td class="text-right">' + r.cv.toFixed(2) + '%</td>' +
+      '<td class="text-right">' + biasStr + '</td>' +
+      '<td class="text-right">' + r.tea.toFixed(1) + '%</td>' +
+      '<td class="text-right"><strong>' + r.te.toFixed(2) + '%</strong></td>' +
+      '<td class="text-center"><strong>' + r.sigma.toFixed(2) + ' σ</strong></td>' +
+      '<td class="text-center"><span class="badge-perf" style="background:' + sigColor + '">' + escH(sigLabel) + '</span></td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table>';
+
+  var tglStr = fmtDateIndo ? fmtDateIndo(new Date()) : new Date().toLocaleDateString('id-ID');
+  html += '<div class="sign-box">' +
+    '<div class="sign-col">' +
+      'Mengetahui,<br><strong>Penanggung Jawab Kendali Mutu Laboratorium</strong>' +
+      '<br><br><br><br>' +
+      '<strong>( ____________________________________ )</strong>' +
+    '</div>' +
+    '<div class="sign-col">' +
+      ((CD.kop && CD.kop.kota) || 'Jakarta') + ', ' + tglStr + '<br><strong>Administrator Sistem &amp; Verifikator Analitik</strong>' +
+      '<br><br><br><br>' +
+      '<strong>' + escH((CD.kop && CD.kop.namaRS) || (CU ? CU.fullName : 'DIDIQC SUPERADMIN')) + '</strong>' +
+    '</div>' +
+  '</div>';
+
+  html += '</body></html>';
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(function(){
+    printWin.print();
+  }, 600);
+}
+
+function pdfPgTabulasiReport(){
+  printPgTabulasiReport();
 }
 </script>
 <!-- EXPORT PANEL MODAL v10.0 -->

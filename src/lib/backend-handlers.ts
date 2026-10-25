@@ -318,4 +318,6 @@ export const handlers: Record<string, HandlerFn> = {
   saveAndPublishPeerGroup: peerGroup.saveAndPublishPeerGroup,
   getMyPeerGroupReports: peerGroup.getMyPeerGroupReports,
   getPeerGroupReportDetail: peerGroup.getPeerGroupReportDetail,
+  getPgTabulasiFilterOptions: peerGroup.getPgTabulasiFilterOptions,
+  runPgTabulasiAnalysis: peerGroup.runPgTabulasiAnalysis,
 };
